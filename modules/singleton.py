@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import typing as tp
 
 from loguru import logger

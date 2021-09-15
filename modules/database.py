@@ -2,12 +2,8 @@ import os
 import typing as tp
 
 from loguru import logger
-from motor.motor_asyncio import (
-    AsyncIOMotorClient,
-    AsyncIOMotorCollection,
-    AsyncIOMotorCursor,
-    AsyncIOMotorDatabase,
-)
+from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection, AsyncIOMotorCursor
+
 from .singleton import SingletonMeta
 
 
