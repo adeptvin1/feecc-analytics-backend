@@ -36,10 +36,6 @@ def create_access_token(data: dict, expires_delta: timedelta = timedelta(minutes
     return encoded_jwt
 
 
-def fake_hash_password(password: str):
-    return password + "321"
-
-
 def get_user(username: str):
     if username in fake_users:
         user_dict = fake_users[username]
