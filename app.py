@@ -48,8 +48,11 @@ async def get_server_status() -> tp.Dict[str, str]:
 
 
 @api.get("/api/v1/employees")
-async def get_all_employees(token: str = Depends(oauth2_scheme)):
-    return await MongoDbWrapper().get_all_employees()
+async def get_all_employees(start: int = 0, limit: int = 20, token: str = Depends(oauth2_scheme)):
+    employees = await MongoDbWrapper().get_all_employees()
+    if limit:
+        return employees[start:limit]
+    return employees[start:]
 
 
 @api.get("/api/v1/employees/{rfid_card_id}")
@@ -58,8 +61,11 @@ async def get_employee_by_card_id(rfid_card_id: str, token: str = Depends(oauth2
 
 
 @api.get("/api/v1/passports")
-async def get_all_passports(token: str = Depends(oauth2_scheme)):
-    return await MongoDbWrapper().get_all_passports()
+async def get_all_passports(start: int = 0, limit: int = 20, token: str = Depends(oauth2_scheme)):
+    passports = await MongoDbWrapper().get_all_passports()
+    if limit:
+        return passports[start:limit]
+    return passports[start:]
 
 
 @api.get("/api/v1/passports/{internal_id}")
@@ -68,8 +74,11 @@ async def get_passport_by_internal_id(internal_id: str, token: str = Depends(oau
 
 
 @api.get("/api/v1/stages")
-async def get_production_stages(token: str = Depends(oauth2_scheme)):
-    return await MongoDbWrapper().get_all_stages()
+async def get_production_stages(start: int = 0, limit: int = 20, token: str = Depends(oauth2_scheme)):
+    stages = await MongoDbWrapper().get_all_stages()
+    if limit:
+        return stages[start:limit]
+    return stages[start:]
 
 
 @api.get("/api/v1/stages/{stage_id}")
