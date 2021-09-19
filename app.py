@@ -1,7 +1,7 @@
 import typing as tp
 from datetime import timedelta
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI
 from fastapi.security import OAuth2PasswordRequestForm
 from loguru import logger
 
