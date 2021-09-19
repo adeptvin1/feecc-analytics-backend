@@ -51,17 +51,26 @@ class MongoDbWrapper(metaclass=SingletonMeta):
     async def get_concrete_employee(self, card_id: str) -> tp.Dict[str, tp.Any]:
         return await self._get_element_by_key(self._employee_collection, key="rfid_card_id", value=card_id)
 
-    async def get_all_employees(self):
-        return await self._execute_all_from_collection(self._employee_collection)
-
-    async def get_all_passports(self):
-        return await self._execute_all_from_collection(self._unit_collection)
-
-    async def get_concrete_passport(self, internal_id: str):
+    async def get_concrete_passport(self, internal_id: str) -> tp.Dict[str, tp.Any]:
         return await self._get_element_by_key(self._unit_collection, key="internal_id", value=internal_id)
 
-    async def get_all_stages(self):
+    async def get_concrete_stage(self, stage_id: str) -> tp.Dict[str, tp.Any]:
+        return await self._get_element_by_key(self._prod_stage_collection, key="id", value=stage_id)
+
+    async def get_all_employees(self) -> tp.Dict[str, tp.Any]:
+        return await self._execute_all_from_collection(self._employee_collection)
+
+    async def get_all_passports(self) -> tp.Dict[str, tp.Any]:
+        return await self._execute_all_from_collection(self._unit_collection)
+
+    async def get_all_stages(self) -> tp.Dict[str, tp.Any]:
         return await self._execute_all_from_collection(self._prod_stage_collection)
 
-    async def get_concrete_stage(self, stage_id: str):
-        return await self._get_element_by_key(self._prod_stage_collection, key="id", value=stage_id)
+    async def count_employees(self) -> int:
+        return await self._employee_collection.count_documents({})
+
+    async def count_units(self) -> int:
+        return await self._unit_collection.count_documents({})
+
+    async def count_stages(self) -> int:
+        return await self._prod_stage_collection.count_documents({})

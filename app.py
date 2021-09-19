@@ -8,13 +8,7 @@ from loguru import logger
 from modules.database import MongoDbWrapper
 from modules.exceptions import AuthException
 from modules.models import Token, User
-from modules.security import (
-    ACCESS_TOKEN_EXPIRE_MINUTES,
-    authenticate_user,
-    create_access_token,
-    get_current_user,
-    oauth2_scheme,
-)
+from modules.security import ACCESS_TOKEN_EXPIRE_MINUTES, authenticate_user, create_access_token, get_current_user
 
 api = FastAPI()
 
@@ -50,52 +44,55 @@ async def get_server_status() -> tp.Dict[str, str]:
 
 
 @api.get("/api/v1/employees")
-async def get_all_employees(start: int = 0, limit: int = 20, token: str = Depends(oauth2_scheme)):
+async def get_all_employees(
+    start: int = 0, limit: tp.Optional[int] = None, current_user: User = Depends(get_current_user)
+):
     """
     Endpoint to get list of all employees from :start: to :limit:. By default, from 0 to 20.
     """
     employees = await MongoDbWrapper().get_all_employees()
-    if limit:
-        return employees[start:limit]
-    return employees[start:]
+    documents_count = await MongoDbWrapper().count_employees()
+    return {"count": documents_count, "data": employees[start:limit]}
 
 
 @api.get("/api/v1/employees/{rfid_card_id}")
-async def get_employee_by_card_id(rfid_card_id: str, token: str = Depends(oauth2_scheme)):
+async def get_employee_by_card_id(rfid_card_id: str, current_user: User = Depends(get_current_user)):
     """Endpoint to get information about concrete employee by his rfid card id"""
     return await MongoDbWrapper().get_concrete_employee(rfid_card_id)
 
 
 @api.get("/api/v1/passports")
-async def get_all_passports(start: int = 0, limit: int = 20, token: str = Depends(oauth2_scheme)):
+async def get_all_passports(
+    start: int = 0, limit: tp.Optional[int] = None, current_user: User = Depends(get_current_user)
+):
     """
     Endpoint to get list of all issued passports from :start: to :limit:. By default, from 0 to 20.
     """
     passports = await MongoDbWrapper().get_all_passports()
-    if limit:
-        return passports[start:limit]
-    return passports[start:]
+    documents_count = await MongoDbWrapper().count_units()
+    return {"count": documents_count, "data": passports[start:limit]}
 
 
 @api.get("/api/v1/passports/{internal_id}")
-async def get_passport_by_internal_id(internal_id: str, token: str = Depends(oauth2_scheme)):
+async def get_passport_by_internal_id(internal_id: str, current_user: User = Depends(get_current_user)):
     """Endpoint to get information about concrete issued passport"""
     return await MongoDbWrapper().get_concrete_passport(internal_id)
 
 
 @api.get("/api/v1/stages")
-async def get_production_stages(start: int = 0, limit: int = 20, token: str = Depends(oauth2_scheme)):
+async def get_production_stages(
+    start: int = 0, limit: tp.Optional[int] = None, current_user: User = Depends(get_current_user)
+):
     """
     Endpoint to get list of all production stages from :start: to :limit:. By default, from 0 to 20.
     """
     stages = await MongoDbWrapper().get_all_stages()
-    if limit:
-        return stages[start:limit]
-    return stages[start:]
+    documents_count = await MongoDbWrapper().count_stages()
+    return {"count": documents_count, "data": stages[start:limit]}
 
 
 @api.get("/api/v1/stages/{stage_id}")
-async def get_stage_by_id(stage_id: str, token: str = Depends(oauth2_scheme)):
+async def get_stage_by_id(stage_id: str, current_user: User = Depends(get_current_user)):
     """Endpoint to get information about concrete production stage"""
     return await MongoDbWrapper().get_concrete_stage(stage_id)
 
