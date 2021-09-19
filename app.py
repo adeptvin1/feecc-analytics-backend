@@ -6,6 +6,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from loguru import logger
 
 from modules.database import MongoDbWrapper
+from modules.exceptions import AuthException
 from modules.models import Token, User
 from modules.security import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
@@ -18,18 +19,8 @@ from modules.security import (
 api = FastAPI()
 
 
-@api.get("/api/v1/users/me")
-async def read_items(token: str = Depends(oauth2_scheme)):
-    """
-    #FIXME: Remove from prod
-
-    Endpoint returning your Bearer token
-    """
-    return {"token": token}
-
-
 @api.post("/token", response_model=Token)
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()) -> tp.Dict[str, str]:
     """
     Endpoint for user-auth
 
@@ -38,20 +29,18 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     user = authenticate_user(form_data.username, form_data.password)
     if not user:
         logger.warning(f"Failed to login user {form_data.username}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        raise AuthException
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(data={"sub": user.username}, expires_delta=access_token_expires)
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-@api.get("/users/me")
-async def read_users_me(current_user: User = Depends(get_current_user)):
-    """#FIXME: Remove from prod"""
-    return current_user
+@api.get("/api/v1/users/me")
+async def read_users_me(current_user: User = Depends(get_current_user)) -> User:
+    """Returns various information about current user by token"""
+    public_data = dict(current_user).copy()
+    del public_data["hashed_password"]
+    return public_data
 
 
 @api.get("/api/v1/status")

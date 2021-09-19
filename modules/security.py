@@ -5,7 +5,10 @@ from datetime import datetime, timedelta
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
+from loguru import logger
 from passlib.context import CryptContext
+
+from modules.exceptions import CredentialsValidationException
 
 from .models import TokenData, User
 
@@ -15,7 +18,11 @@ ALGORITHM = "HS256"
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 fake_users = {
-    "admin": {"username": "admin", "hashed_password": "$2b$12$fBRc/pmRElhwnZ/MWdFny.CHk4yszGLOET5iI4yWUcztUybRwzewq"}
+    "admin": {
+        "username": "admin",
+        "hashed_password": "$2b$12$fBRc/pmRElhwnZ/MWdFny.CHk4yszGLOET5iI4yWUcztUybRwzewq",
+        "is_admin": True,
+    }
 }
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -51,21 +58,19 @@ def authenticate_user(username: str, password: str):
     return user
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme)):
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
+    logger.info(f"got token {token}")
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        logger.info(payload)
         username: str = payload.get("sub")
         if username is None:
-            raise credentials_exception
+            raise CredentialsValidationException
         token_data = TokenData(username=username)
     except JWTError:
-        raise credentials_exception
-    user = get_user(username=token_data.username)
+        raise CredentialsValidationException
+    user: User = get_user(username=token_data.username)
     if user is None:
-        raise credentials_exception
+        raise CredentialsValidationException
+    logger.info(f"user: {user}")
     return user
