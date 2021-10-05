@@ -7,7 +7,7 @@ from loguru import logger
 
 from modules.database import MongoDbWrapper
 from modules.exceptions import AuthException
-from modules.models import Token, User
+from modules.models import PassportsFilter, Token, User
 from modules.security import ACCESS_TOKEN_EXPIRE_MINUTES, authenticate_user, create_access_token, get_current_user
 
 api = FastAPI()
@@ -63,15 +63,18 @@ async def get_employee_by_card_id(
     return await MongoDbWrapper().get_concrete_employee(rfid_card_id)
 
 
-@api.get("/api/v1/passports")
+@api.post("/api/v1/passports")
 async def get_all_passports(
-    start: int = 0, limit: tp.Optional[int] = None, current_user: User = Depends(get_current_user)
+    filter: tp.Optional[PassportsFilter],
+    start: int = 0,
+    limit: tp.Optional[int] = None,
+    current_user: User = Depends(get_current_user),
 ) -> tp.Dict[str, tp.Any]:
     """
     Endpoint to get list of all issued passports from :start: to :limit:. By default, from 0 to 20.
     """
-    passports = await MongoDbWrapper().get_all_passports()
-    documents_count = await MongoDbWrapper().count_units()
+    passports = await MongoDbWrapper().get_all_passports(filter)
+    documents_count = await MongoDbWrapper().count_passports(filter)
     return {"count": documents_count, "data": passports[start:limit]}
 
 

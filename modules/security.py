@@ -41,13 +41,12 @@ def create_access_token(
 
 
 async def authenticate_user(username: str, password: str) -> tp.Optional[User]:
-    user_data = await MongoDbWrapper().get_user(username)
+    user_data = await MongoDbWrapper().get_concrete_user(username)
     if not user_data:
         return None
-    user = User(**user_data)
-    if not verify_password(password, user.hashed_password):
+    if not verify_password(password, user_data.hashed_password):
         return None
-    return user
+    return user_data
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
@@ -61,7 +60,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
         token_data = TokenData(username=username)
     except JWTError:
         raise CredentialsValidationException
-    user: User = User(**await MongoDbWrapper().get_user(username=token_data.username))
+    user: tp.Optional[User] = await MongoDbWrapper().get_concrete_user(username=token_data.username)
     if user is None:
         raise CredentialsValidationException
     logger.info(f"user: {user}")
