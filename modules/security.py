@@ -10,8 +10,8 @@ from passlib.context import CryptContext
 
 from modules.exceptions import CredentialsValidationException
 
-from .models import TokenData, User
 from .database import MongoDbWrapper
+from .models import TokenData, User
 
 SECRET_KEY = os.environ.get("SECRET_KEY")
 ACCESS_TOKEN_EXPIRE_MINUTES = 60

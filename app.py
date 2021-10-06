@@ -3,12 +3,14 @@ from datetime import timedelta
 
 from fastapi import Depends, FastAPI
 from fastapi.security import OAuth2PasswordRequestForm
+from fastapi_pagination.api import add_pagination
 from loguru import logger
 
 from modules.database import MongoDbWrapper
 from modules.exceptions import AuthException
-from modules.models import PassportsFilter, Token, User
+from modules.models import Employee, EncodedEmployee, PassportsFilter, Token, User
 from modules.security import ACCESS_TOKEN_EXPIRE_MINUTES, authenticate_user, create_access_token, get_current_user
+from modules.utils import decode_employee
 
 api = FastAPI()
 
@@ -65,17 +67,16 @@ async def get_employee_by_card_id(
 
 @api.post("/api/v1/passports")
 async def get_all_passports(
-    filter: tp.Optional[PassportsFilter],
-    start: int = 0,
-    limit: tp.Optional[int] = None,
+    page: int = 0,
+    items: int = 20,
     current_user: User = Depends(get_current_user),
 ) -> tp.Dict[str, tp.Any]:
     """
     Endpoint to get list of all issued passports from :start: to :limit:. By default, from 0 to 20.
     """
-    passports = await MongoDbWrapper().get_all_passports(filter)
-    documents_count = await MongoDbWrapper().count_passports(filter)
-    return {"count": documents_count, "data": passports[start:limit]}
+    passports = await MongoDbWrapper().get_all_passports()
+    documents_count = await MongoDbWrapper().count_passports()
+    return {"count": documents_count, "data": passports[(page - 1) * items : page * items]}
 
 
 @api.get("/api/v1/passports/{internal_id}")
@@ -105,5 +106,5 @@ async def get_stage_by_id(stage_id: str, current_user: User = Depends(get_curren
 
 
 @api.post("/api/v1/employees/decode")
-async def decode_employee() -> tp.NoReturn:
-    pass
+async def decode_existing_employee(encoded_employee: EncodedEmployee) -> tp.Optional[Employee]:
+    return await decode_employee(await MongoDbWrapper().get_all_employees(), encoded_employee.encoded_name)

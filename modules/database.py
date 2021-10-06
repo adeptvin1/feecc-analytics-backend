@@ -3,13 +3,10 @@ import typing as tp
 
 from loguru import logger
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection, AsyncIOMotorCursor
-from pydantic.main import BaseModel
 
 from modules.models import BaseFilter, Employee, Passport, ProductionStage, User
-from modules.utils import normalize_filter
 
 from .singleton import SingletonMeta
-
 
 DBModel = tp.Union[Employee, Passport, ProductionStage, User]
 
@@ -62,12 +59,10 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         return new_filter
 
     async def _get_all_from_collection(
-        self, collection_: AsyncIOMotorCollection, model_: DBModel, filter_: tp.Optional[BaseFilter]
+        self, collection_: AsyncIOMotorCollection, model_: DBModel, filter_: tp.Optional[BaseFilter] = None
     ) -> tp.List[DBModel]:
         """retrieves all documents from the specified collection"""
-        normalized_filter = {}
-        if filter_:
-            normalized_filter = await self.normalize_filter(filter_)
+        normalized_filter = await self.normalize_filter(filter_)
         return [model_(**_) for _ in await collection_.find(normalized_filter, {"_id": 0}).to_list(length=None)]
 
     async def _get_element_by_key(
@@ -117,7 +112,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         """retrieves all employees"""
         return await self._get_all_from_collection(self._employee_collection, model_=Employee)
 
-    async def get_all_passports(self, filter_: BaseFilter) -> tp.List[Passport]:
+    async def get_all_passports(self, filter_: tp.Optional[BaseFilter] = None) -> tp.List[Passport]:
         """retrieves all passports"""
         return await self._get_all_from_collection(self._unit_collection, model_=Passport, filter_=filter_)
 
@@ -125,14 +120,16 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         """retrieves all production stages"""
         return await self._get_all_from_collection(self._prod_stage_collection, model_=ProductionStage)
 
-    async def count_employees(self, filter_: tp.Dict[str, str] = {}) -> int:
+    async def count_employees(self, filter_: tp.Optional[BaseFilter] = None) -> int:
         """count documents in employee collection"""
-        return await self._count_documents_in_collection(self._employee_collection, filter_)
+        return await self._count_documents_in_collection(
+            self._employee_collection, await self.normalize_filter(filter_)
+        )
 
-    async def count_passports(self, filter_: BaseFilter) -> int:
+    async def count_passports(self, filter_: tp.Optional[BaseFilter] = None) -> int:
         """count documents in employee collection"""
-        return await self._count_documents_in_collection(self._unit_collection, filter_)
+        return await self._count_documents_in_collection(self._unit_collection, await self.normalize_filter(filter_))
 
-    async def count_stages(self, filter_: tp.Dict[str, str] = {}) -> int:
+    async def count_stages(self, filter_: tp.Optional[BaseFilter] = None) -> int:
         """count documents in employee collection"""
-        return await self._count_documents_in_collection(self._unit_collection, filter_)
+        return await self._count_documents_in_collection(self._unit_collection, await self.normalize_filter(filter_))

@@ -1,7 +1,8 @@
+import hashlib
 import typing as tp
+from datetime import date, datetime
 
 from pydantic import BaseModel
-from datetime import date, datetime
 
 
 class BaseFilter(BaseModel):
@@ -44,6 +45,20 @@ class Employee(BaseModel):
     name: str
     position: str
 
+    async def compose(self) -> str:
+        print(" ".join([self.rfid_card_id, self.name, self.position]))
+        return " ".join([self.rfid_card_id, self.name, self.position])
+
+    async def encode_sha256(self) -> str:
+        employee_passport_string: str = await self.compose()
+        employee_passport_string_encoded: bytes = employee_passport_string.encode()
+        employee_passport_code: str = hashlib.sha256(employee_passport_string_encoded).hexdigest()
+        return employee_passport_code
+
+
+class EncodedEmployee(BaseModel):
+    encoded_name: str
+
 
 class ProductionStage(BaseModel):
     name: str
@@ -55,4 +70,4 @@ class ProductionStage(BaseModel):
     additional_info: tp.Dict[tp.Any, tp.Any]
     id: str
     is_in_db: bool
-    creation_time: str
+    creation_time: tp.Optional[datetime]
