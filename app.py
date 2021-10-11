@@ -8,7 +8,7 @@ from loguru import logger
 
 from modules.database import MongoDbWrapper
 from modules.exceptions import AuthException
-from modules.models import Employee, EncodedEmployee, PassportsFilter, Token, User
+from modules.models import Employee, EncodedEmployee, Passport, PassportsFilter, ProductionStage, Token, User
 from modules.security import ACCESS_TOKEN_EXPIRE_MINUTES, authenticate_user, create_access_token, get_current_user
 from modules.utils import decode_employee
 
@@ -32,9 +32,9 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 
 
 @api.get("/api/v1/users/me")
-async def read_users_me(current_user: User = Depends(get_current_user)) -> tp.Dict[str, tp.Any]:
+async def read_users_me(user: User = Depends(get_current_user)) -> tp.Dict[str, tp.Any]:
     """Returns various information about current user by token"""
-    public_data = dict(current_user).copy()
+    public_data = dict(user).copy()
     del public_data["hashed_password"]
     return public_data
 
@@ -47,20 +47,18 @@ async def get_server_status() -> tp.Dict[str, str]:
 
 @api.get("/api/v1/employees")
 async def get_all_employees(
-    start: int = 0, limit: tp.Optional[int] = None, current_user: User = Depends(get_current_user)
+    page: int = 0, items: int = 20, user: User = Depends(get_current_user)
 ) -> tp.Dict[str, tp.Any]:
     """
     Endpoint to get list of all employees from :start: to :limit:. By default, from 0 to 20.
     """
     employees = await MongoDbWrapper().get_all_employees()
     documents_count = await MongoDbWrapper().count_employees()
-    return {"count": documents_count, "data": employees[start:limit]}
+    return {"count": documents_count, "data": employees[(page - 1) * items : page * items]}
 
 
 @api.get("/api/v1/employees/{rfid_card_id}")
-async def get_employee_by_card_id(
-    rfid_card_id: str, current_user: User = Depends(get_current_user)
-) -> tp.Dict[str, tp.Any]:
+async def get_employee_by_card_id(rfid_card_id: str, user: User = Depends(get_current_user)) -> tp.Optional[Employee]:
     """Endpoint to get information about concrete employee by his rfid card id"""
     return await MongoDbWrapper().get_concrete_employee(rfid_card_id)
 
@@ -69,7 +67,7 @@ async def get_employee_by_card_id(
 async def get_all_passports(
     page: int = 0,
     items: int = 20,
-    current_user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ) -> tp.Dict[str, tp.Any]:
     """
     Endpoint to get list of all issued passports from :start: to :limit:. By default, from 0 to 20.
@@ -81,26 +79,26 @@ async def get_all_passports(
 
 @api.get("/api/v1/passports/{internal_id}")
 async def get_passport_by_internal_id(
-    internal_id: str, current_user: User = Depends(get_current_user)
-) -> tp.Dict[str, tp.Any]:
+    internal_id: str, user: User = Depends(get_current_user)
+) -> tp.Optional[Passport]:
     """Endpoint to get information about concrete issued passport"""
     return await MongoDbWrapper().get_concrete_passport(internal_id)
 
 
 @api.get("/api/v1/stages")
 async def get_production_stages(
-    start: int = 0, limit: tp.Optional[int] = None, current_user: User = Depends(get_current_user)
+    page: int = 0, items: int = 20, user: User = Depends(get_current_user)
 ) -> tp.Dict[str, tp.Any]:
     """
     Endpoint to get list of all production stages from :start: to :limit:. By default, from 0 to 20.
     """
     stages = await MongoDbWrapper().get_all_stages()
     documents_count = await MongoDbWrapper().count_stages()
-    return {"count": documents_count, "data": stages[start:limit]}
+    return {"count": documents_count, "data": stages[(page - 1) * items : page * items]}
 
 
 @api.get("/api/v1/stages/{stage_id}")
-async def get_stage_by_id(stage_id: str, current_user: User = Depends(get_current_user)) -> tp.Dict[str, tp.Any]:
+async def get_stage_by_id(stage_id: str, user: User = Depends(get_current_user)) -> tp.Optional[ProductionStage]:
     """Endpoint to get information about concrete production stage"""
     return await MongoDbWrapper().get_concrete_stage(stage_id)
 

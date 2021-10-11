@@ -3,6 +3,7 @@ import typing as tp
 
 from loguru import logger
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection, AsyncIOMotorCursor
+from pydantic.main import BaseModel
 
 from modules.models import BaseFilter, Employee, Passport, ProductionStage, User
 
@@ -59,8 +60,8 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         return new_filter
 
     async def _get_all_from_collection(
-        self, collection_: AsyncIOMotorCollection, model_: DBModel, filter_: tp.Optional[BaseFilter] = None
-    ) -> tp.List[DBModel]:
+        self, collection_: AsyncIOMotorCollection, model_: tp.Type[BaseModel], filter_: tp.Optional[BaseFilter] = None
+    ) -> tp.List[BaseModel]:
         """retrieves all documents from the specified collection"""
         normalized_filter = await self.normalize_filter(filter_)
         return [model_(**_) for _ in await collection_.find(normalized_filter, {"_id": 0}).to_list(length=None)]
@@ -73,10 +74,11 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         return result
 
     async def _count_documents_in_collection(
-        self, collection_: AsyncIOMotorCollection, filter_: tp.Optional[BaseFilter]
+        self, collection_: AsyncIOMotorCollection, filter_: tp.Optional[tp.Dict[str, tp.Any]]
     ) -> int:
         normalized_filter = await self.normalize_filter(filter_)
-        return await collection_.count_documents(normalized_filter)
+        count: int = await collection_.count_documents(normalized_filter)
+        return count
 
     async def get_concrete_employee(self, card_id: str) -> tp.Optional[Employee]:
         """retrieves an employee by card_id"""
