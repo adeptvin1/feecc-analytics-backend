@@ -1,16 +1,17 @@
 import typing as tp
+import httpx
 from datetime import timedelta
 
 from fastapi import Depends, FastAPI
 from fastapi.security import OAuth2PasswordRequestForm
-from fastapi_pagination.api import add_pagination
 from loguru import logger
+from yaml.error import YAMLError
 
 from modules.database import MongoDbWrapper
-from modules.exceptions import AuthException
-from modules.models import Employee, EncodedEmployee, Passport, PassportsFilter, ProductionStage, Token, User
+from modules.exceptions import AuthException, ConnectionTimeoutException, IncorrectAddressException, ParserException
+from modules.models import Employee, EncodedEmployee, Passport, ProductionStage, Token, User
 from modules.security import ACCESS_TOKEN_EXPIRE_MINUTES, authenticate_user, create_access_token, get_current_user
-from modules.utils import decode_employee
+from modules.utils import decode_employee, load_yaml
 
 api = FastAPI()
 
@@ -106,3 +107,19 @@ async def get_stage_by_id(stage_id: str, user: User = Depends(get_current_user))
 @api.post("/api/v1/employees/decode")
 async def decode_existing_employee(encoded_employee: EncodedEmployee) -> tp.Optional[Employee]:
     return await decode_employee(await MongoDbWrapper().get_all_employees(), encoded_employee.encoded_name)
+
+
+@api.get("/api/v1/ipfs_decode")
+async def parse_ipfs_link(link: str) -> tp.Any:
+    """ Extracts data from IPFS/Pinata """
+    if not link.startswith(("http://", "https://")):
+        raise IncorrectAddressException
+
+    try:
+        async with httpx.AsyncClient() as client:
+            request = await client.get(link)
+            return await load_yaml(request.text)
+    except httpx.ReadTimeout:
+        raise ConnectionTimeoutException
+    except YAMLError:
+        raise ParserException

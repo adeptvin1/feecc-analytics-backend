@@ -1,6 +1,6 @@
 import hashlib
 import typing as tp
-from datetime import date, datetime
+from datetime import datetime
 
 from pydantic import BaseModel
 
