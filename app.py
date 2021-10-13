@@ -1,19 +1,34 @@
 import typing as tp
-import httpx
 from datetime import timedelta
 
+import httpx
 from fastapi import Depends, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from loguru import logger
 from yaml.error import YAMLError
 
 from modules.database import MongoDbWrapper
-from modules.exceptions import AuthException, ConnectionTimeoutException, IncorrectAddressException, ParserException, UnhandledException
+from modules.exceptions import (
+    AuthException,
+    ConnectionTimeoutException,
+    IncorrectAddressException,
+    ParserException,
+    UnhandledException,
+)
 from modules.models import Employee, EncodedEmployee, IPFSData, Passport, ProductionStage, Token, User
 from modules.security import ACCESS_TOKEN_EXPIRE_MINUTES, authenticate_user, create_access_token, get_current_user
 from modules.utils import decode_employee, load_yaml
 
 api = FastAPI()
+
+api.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @api.post("/token", response_model=Token)
