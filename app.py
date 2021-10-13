@@ -8,8 +8,8 @@ from loguru import logger
 from yaml.error import YAMLError
 
 from modules.database import MongoDbWrapper
-from modules.exceptions import AuthException, ConnectionTimeoutException, IncorrectAddressException, ParserException
-from modules.models import Employee, EncodedEmployee, Passport, ProductionStage, Token, User
+from modules.exceptions import AuthException, ConnectionTimeoutException, IncorrectAddressException, ParserException, UnhandledException
+from modules.models import Employee, EncodedEmployee, IPFSData, Passport, ProductionStage, Token, User
 from modules.security import ACCESS_TOKEN_EXPIRE_MINUTES, authenticate_user, create_access_token, get_current_user
 from modules.utils import decode_employee, load_yaml
 
@@ -110,7 +110,7 @@ async def decode_existing_employee(encoded_employee: EncodedEmployee) -> tp.Opti
 
 
 @api.get("/api/v1/ipfs_decode")
-async def parse_ipfs_link(link: str) -> tp.Any:
+async def parse_ipfs_link(link: str) -> IPFSData:
     """ Extracts data from IPFS/Pinata """
     if not link.startswith(("http://", "https://")):
         raise IncorrectAddressException
@@ -123,3 +123,10 @@ async def parse_ipfs_link(link: str) -> tp.Any:
         raise ConnectionTimeoutException
     except YAMLError:
         raise ParserException
+    except Exception as exception:
+        raise UnhandledException(error=exception)
+
+
+@api.get("/api/v1/validate")
+async def validate_stages() -> tp.List[bool]:
+    pass

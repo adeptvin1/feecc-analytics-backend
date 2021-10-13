@@ -48,3 +48,12 @@ class ParserException(HTTPException):
         self.headers = {"WWW-Authenticate": "Bearer"}
 
         logger.warning(f"{self.detail} : {kwargs}")
+
+
+class UnhandledException(HTTPException):
+    def __init__(self, **kwargs: tp.Any) -> None:
+        self.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        self.detail = f"An error occured: {kwargs.get('error', None) or 'unhandled'}"
+        self.headers = {"WWW-Authenticate": "Bearer"}
+
+        logger.warning(f"{self.detail} : {kwargs}")

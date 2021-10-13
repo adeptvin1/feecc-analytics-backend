@@ -71,3 +71,9 @@ class ProductionStage(BaseModel):
     id: str
     is_in_db: bool
     creation_time: tp.Optional[datetime]
+
+
+class IPFSData(BaseModel):
+    id: str
+    model: str
+    stages: tp.List[tp.Dict[str, tp.Union[tp.List[str], str]]]
