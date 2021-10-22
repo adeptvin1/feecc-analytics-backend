@@ -20,6 +20,8 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         logger.info("Connecting to MongoDB")
         mongo_client_url: str = str(os.getenv("MONGO_CONNECTION_URL")) + "&ssl=true&ssl_cert_reqs=CERT_NONE"
 
+        print(mongo_client_url)
+
         if mongo_client_url is None:
             message = "Cannot establish database connection: $MONGO_CONNECTION_URL environment variable is not set."
             logger.critical(message)
