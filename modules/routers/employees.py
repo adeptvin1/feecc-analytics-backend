@@ -3,6 +3,7 @@ import typing as tp
 from fastapi import APIRouter, Depends
 
 from ..database import MongoDbWrapper
+from ..exceptions import ForbiddenActionException
 from ..models import Employee, EncodedEmployee, User
 from ..security import get_current_user
 from ..utils import decode_employee
@@ -20,6 +21,21 @@ async def get_all_employees(
     employees = await MongoDbWrapper().get_all_employees()
     documents_count = await MongoDbWrapper().count_employees()
     return {"count": documents_count, "data": employees[(page - 1) * items : page * items]}
+
+
+@router.post("/api/v1/employees")
+async def create_new_employee(employee_data: Employee, user: User = Depends(get_current_user)) -> None:
+    """Endpoint to create new employee"""
+    if not user.is_admin:
+        raise ForbiddenActionException
+    await MongoDbWrapper().add_employee(employee_data)
+
+
+@router.delete("/api/v1/employees/{rfid_card_id}")
+async def delete_employee(rfid_card_id: str, user: User = Depends(get_current_user)) -> None:
+    if not user.is_admin:
+        raise ForbiddenActionException
+    await MongoDbWrapper().remove_employee(rfid_card_id)
 
 
 @router.get("/api/v1/employees/{rfid_card_id}")

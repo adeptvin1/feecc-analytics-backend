@@ -69,3 +69,14 @@ class UnhandledException(HTTPException):
         self.headers = {"WWW-Authenticate": "Bearer"}
 
         logger.warning(f"{self.detail} : {kwargs}")
+
+
+class ForbiddenActionException(HTTPException):
+    """An unhandled exception occurred"""
+
+    def __init__(self, **kwargs: tp.Any) -> None:
+        self.status_code = status.HTTP_403_FORBIDDEN
+        self.detail = f"insufficient permissions for current user"
+        self.headers = {"WWW-Authenticate": "Bearer"}
+
+        logger.warning(f"{self.detail} : {kwargs}")

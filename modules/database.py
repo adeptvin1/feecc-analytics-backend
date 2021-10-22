@@ -3,7 +3,7 @@ import typing as tp
 
 from loguru import logger
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection, AsyncIOMotorCursor
-from pydantic.main import BaseModel
+from pydantic import BaseModel
 
 from modules.models import BaseFilter, Employee, Passport, ProductionStage, User
 
@@ -82,6 +82,12 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         count: int = await collection_.count_documents(normalized_filter)
         return count
 
+    async def _add_document_to_collection(self, collection_: AsyncIOMotorCollection, item_: tp.Type[BaseModel]) -> None:
+        await collection_.insert_one(dict(item_))
+
+    async def _remove_document_from_collection(self, collection_: AsyncIOMotorCollection, key: str, value: str) -> None:
+        await collection_.find_one_and_delete({key: value})
+
     async def get_concrete_employee(self, card_id: str) -> tp.Optional[Employee]:
         """retrieves an employee by card_id"""
         employee = await self._get_element_by_key(self._employee_collection, key="rfid_card_id", value=card_id)
@@ -137,3 +143,10 @@ class MongoDbWrapper(metaclass=SingletonMeta):
     async def count_stages(self, filter_: tp.Optional[BaseFilter] = None) -> int:
         """count documents in employee collection"""
         return await self._count_documents_in_collection(self._unit_collection, await self.normalize_filter(filter_))
+
+    async def add_employee(self, employee: Employee) -> None:
+        """add employee to database"""
+        await self._add_document_to_collection(self._employee_collection, employee)
+
+    async def remove_employee(self, rfid_card_id: str) -> None:
+        await self._remove_document_from_collection(self._employee_collection, key="rfid_card_id", value=rfid_card_id)
