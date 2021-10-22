@@ -50,7 +50,7 @@ class IncorrectAddressException(HTTPException):
 
 
 class ParserException(HTTPException):
-    """Exception caused by calling passport parsing on non yaml-like file"""
+    """Exception caused by parsing on non yaml-like file"""
 
     def __init__(self, **kwargs: tp.Any) -> None:
         self.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
