@@ -3,7 +3,7 @@ import typing as tp
 from fastapi import APIRouter, Depends
 
 from ..database import MongoDbWrapper
-from ..models import Passport, User
+from ..models import DatabaseEntryFields, Passport, User
 from ..security import check_user_permissions, get_current_user
 
 router = APIRouter()
@@ -31,6 +31,12 @@ async def create_new_passport(passport: Passport, user=Depends(check_user_permis
 async def delete_passport(internal_id: str, user=Depends(check_user_permissions)) -> None:
     """Endpoint to delete an existing passport from database"""
     await MongoDbWrapper().remove_passport(internal_id)
+
+
+@router.get("/api/v1/passports/fields")
+async def get_passport_entry_fields() -> DatabaseEntryFields:
+    # TODO
+    await MongoDbWrapper()._get_fields_from_collection()
 
 
 @router.get("/api/v1/passports/{internal_id}")

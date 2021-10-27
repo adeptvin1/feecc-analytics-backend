@@ -77,3 +77,7 @@ class IPFSData(BaseModel):
     id: str
     model: str
     stages: tp.List[tp.Dict[str, tp.Union[tp.List[str], str]]]
+
+
+class DatabaseEntryFields(BaseModel):
+    fields: tp.List[str]

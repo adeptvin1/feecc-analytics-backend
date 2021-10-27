@@ -88,6 +88,10 @@ class MongoDbWrapper(metaclass=SingletonMeta):
     async def _remove_document_from_collection(self, collection_: AsyncIOMotorCollection, key: str, value: str) -> None:
         await collection_.find_one_and_delete({key: value})
 
+    async def _get_fields_from_collection(collection_: AsyncIOMotorCollection):
+        # TODO: Implement schemas analyzer
+        pass
+
     async def get_concrete_employee(self, card_id: str) -> tp.Optional[Employee]:
         """retrieves an employee by card_id"""
         employee = await self._get_element_by_key(self._employee_collection, key="rfid_card_id", value=card_id)
