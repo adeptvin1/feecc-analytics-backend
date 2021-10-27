@@ -8,7 +8,7 @@ from jose import JWTError, jwt
 from loguru import logger
 from passlib.context import CryptContext
 
-from exceptions import CredentialsValidationException, ForbiddenActionException
+from .exceptions import CredentialsValidationException, ForbiddenActionException
 
 from .database import MongoDbWrapper
 from .models import TokenData, User

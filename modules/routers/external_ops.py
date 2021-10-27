@@ -1,13 +1,14 @@
 import typing as tp
 
 import httpx
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from yaml import YAMLError
 
+from ..security import get_current_user
 from ..exceptions import ConnectionTimeoutException, IncorrectAddressException, ParserException, UnhandledException
 from ..utils import load_yaml
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(get_current_user)])
 
 
 @router.get("/api/v1/ipfs_decode")
