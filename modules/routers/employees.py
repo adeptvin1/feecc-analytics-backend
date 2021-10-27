@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from ..database import MongoDbWrapper
 from ..exceptions import ForbiddenActionException
 from ..models import Employee, EncodedEmployee, User
-from ..security import get_current_user
+from ..security import get_current_user, check_user_permissions
 from ..utils import decode_employee
 
 router = APIRouter()
@@ -24,17 +24,14 @@ async def get_all_employees(
 
 
 @router.post("/api/v1/employees")
-async def create_new_employee(employee_data: Employee, user: User = Depends(get_current_user)) -> None:
+async def create_new_employee(employee_data: Employee, user = Depends(check_user_permissions)) -> None:
     """Endpoint to create new employee"""
-    if not user.is_admin:
-        raise ForbiddenActionException
     await MongoDbWrapper().add_employee(employee_data)
 
 
 @router.delete("/api/v1/employees/{rfid_card_id}")
-async def delete_employee(rfid_card_id: str, user: User = Depends(get_current_user)) -> None:
-    if not user.is_admin:
-        raise ForbiddenActionException
+async def delete_employee(rfid_card_id: str, user = Depends(check_user_permissions)) -> None:
+    """Endpoint to delete employee from database"""
     await MongoDbWrapper().remove_employee(rfid_card_id)
 
 

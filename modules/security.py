@@ -8,7 +8,7 @@ from jose import JWTError, jwt
 from loguru import logger
 from passlib.context import CryptContext
 
-from modules.exceptions import CredentialsValidationException
+from exceptions import CredentialsValidationException, ForbiddenActionException
 
 from .database import MongoDbWrapper
 from .models import TokenData, User
@@ -65,3 +65,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
         raise CredentialsValidationException
     logger.info(f"user: {user}")
     return user
+
+
+async def check_user_permissions(user: User = Depends(get_current_user)) -> None:
+    if not user.is_admin:
+        raise ForbiddenActionException
