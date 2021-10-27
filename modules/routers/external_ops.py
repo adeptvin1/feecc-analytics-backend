@@ -5,14 +5,13 @@ from fastapi import APIRouter
 from yaml import YAMLError
 
 from ..exceptions import ConnectionTimeoutException, IncorrectAddressException, ParserException, UnhandledException
-from ..models import IPFSData
 from ..utils import load_yaml
 
 router = APIRouter()
 
 
 @router.get("/api/v1/ipfs_decode")
-async def parse_ipfs_link(link: str) -> IPFSData:
+async def parse_ipfs_link(link: str) -> str:
     """ Extracts saved passport from IPFS/Pinata """
     if not link.startswith(("http://", "https://")):
         raise IncorrectAddressException

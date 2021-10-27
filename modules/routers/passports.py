@@ -4,12 +4,12 @@ from fastapi import APIRouter, Depends
 
 from ..database import MongoDbWrapper
 from ..models import Passport, User
-from ..security import get_current_user
+from ..security import check_user_permissions, get_current_user
 
 router = APIRouter()
 
 
-@router.post("/api/v1/passports")
+@router.get("/api/v1/passports")
 async def get_all_passports(
     page: int = 0, items: int = 20, user: User = Depends(get_current_user)
 ) -> tp.Dict[str, tp.Any]:
@@ -19,6 +19,18 @@ async def get_all_passports(
     passports = await MongoDbWrapper().get_all_passports()
     documents_count = await MongoDbWrapper().count_passports()
     return {"count": documents_count, "data": passports[(page - 1) * items : page * items]}
+
+
+@router.post("/api/v1/passports")
+async def create_new_passport(passport: Passport, user=Depends(check_user_permissions)) -> None:
+    """Endpoint to create a new passport"""
+    await MongoDbWrapper().add_passport(passport)
+
+
+@router.delete("/api/v1/passports/{internal_id}")
+async def delete_passport(internal_id: str, user=Depends(check_user_permissions)) -> None:
+    """Endpoint to delete an existing passport from database"""
+    await MongoDbWrapper().remove_passport(internal_id)
 
 
 @router.get("/api/v1/passports/{internal_id}")

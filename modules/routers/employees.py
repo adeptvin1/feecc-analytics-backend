@@ -24,13 +24,13 @@ async def get_all_employees(
 
 
 @router.post("/api/v1/employees")
-async def create_new_employee(employee_data: Employee, user = Depends(check_user_permissions)) -> None:
+async def create_new_employee(employee_data: Employee, user=Depends(check_user_permissions)) -> None:
     """Endpoint to create new employee"""
     await MongoDbWrapper().add_employee(employee_data)
 
 
 @router.delete("/api/v1/employees/{rfid_card_id}")
-async def delete_employee(rfid_card_id: str, user = Depends(check_user_permissions)) -> None:
+async def delete_employee(rfid_card_id: str, user=Depends(check_user_permissions)) -> None:
     """Endpoint to delete employee from database"""
     await MongoDbWrapper().remove_employee(rfid_card_id)
 

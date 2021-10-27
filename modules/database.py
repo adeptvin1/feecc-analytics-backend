@@ -148,5 +148,11 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         """add employee to database"""
         await self._add_document_to_collection(self._employee_collection, employee)
 
+    async def add_passport(self, passport: Passport) -> None:
+        await self._add_document_to_collection(self._unit_collection, passport)
+
     async def remove_employee(self, rfid_card_id: str) -> None:
         await self._remove_document_from_collection(self._employee_collection, key="rfid_card_id", value=rfid_card_id)
+
+    async def remove_passport(self, internal_id: str) -> None:
+        await self._remove_document_from_collection(self._unit_collection, key="internal_id", value=internal_id)
