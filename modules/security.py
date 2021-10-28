@@ -8,10 +8,9 @@ from jose import JWTError, jwt
 from loguru import logger
 from passlib.context import CryptContext
 
-from .exceptions import CredentialsValidationException, ForbiddenActionException
-
 from .database import MongoDbWrapper
-from .models import TokenData, User
+from .exceptions import CredentialsValidationException, ForbiddenActionException
+from .models import NewUser, TokenData, User, UserWithPassword
 
 SECRET_KEY = os.environ.get("SECRET_KEY")
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
@@ -40,7 +39,7 @@ def create_access_token(
     return encoded_jwt
 
 
-async def authenticate_user(username: str, password: str) -> tp.Optional[User]:
+async def authenticate_user(username: str, password: str) -> tp.Optional[UserWithPassword]:
     user_data = await MongoDbWrapper().get_concrete_user(username)
     if not user_data:
         return None
@@ -60,13 +59,24 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
         token_data = TokenData(username=username)
     except JWTError:
         raise CredentialsValidationException
-    user: tp.Optional[User] = await MongoDbWrapper().get_concrete_user(username=token_data.username)
+    user: tp.Optional[UserWithPassword] = await MongoDbWrapper().get_concrete_user(username=token_data.username)
     if user is None:
         raise CredentialsValidationException
-    logger.info(f"user: {user}")
-    return user
+    logger.info(f"user: {dict(user)}")
+    return User(**dict(user))
 
 
 async def check_user_permissions(user: User = Depends(get_current_user)) -> None:
     if not user.is_admin:
         raise ForbiddenActionException
+
+
+async def create_new_user(user: NewUser) -> UserWithPassword:
+    """New user's creation and validation of credentials sfields"""
+    if len(user.password) < 8:
+        raise CredentialsValidationException(details="Password length less than 8 symbols")
+    if len(user.username) < 4:
+        raise CredentialsValidationException(details="Username lenght less than 4 symbols")
+    return UserWithPassword(
+        username=user.username, is_admin=user.is_admin, hashed_password=get_password_hash(user.password)
+    )

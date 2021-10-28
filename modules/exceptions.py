@@ -19,9 +19,9 @@ class AuthException(HTTPException):
 class CredentialsValidationException(HTTPException):
     """Exception caused by credentials (login/pass) validation"""
 
-    def __init__(self, **kwargs: tp.Any) -> None:
+    def __init__(self, details: tp.Optional[str] = None, **kwargs: tp.Any) -> None:
         self.status_code = status.HTTP_401_UNAUTHORIZED
-        self.detail = "Could not validate credentials"
+        self.detail = details or "Could not validate credentials"
         self.headers = {"WWW-Authenticate": "Bearer"}
 
         logger.warning(f"{self.detail} : {kwargs}")

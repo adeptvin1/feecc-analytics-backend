@@ -5,8 +5,7 @@ from loguru import logger
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection, AsyncIOMotorCursor
 from pydantic import BaseModel
 
-from modules.models import BaseFilter, Employee, Passport, ProductionStage, User
-
+from .models import BaseFilter, Employee, Passport, ProductionStage, User, UserWithPassword
 from .singleton import SingletonMeta
 
 DBModel = tp.Union[Employee, Passport, ProductionStage, User]
@@ -113,14 +112,14 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             return None
         return ProductionStage(**production_stage)
 
-    async def get_concrete_user(self, username: tp.Optional[str]) -> tp.Optional[User]:
+    async def get_concrete_user(self, username: tp.Optional[str]) -> tp.Optional[UserWithPassword]:
         """retrieves information about analytics user"""
         if not username:
             raise ValueError("No username provided")
         user = await self._get_element_by_key(self._credentials_collection, key="username", value=username)
         if not user:
             return None
-        return User(**user)
+        return UserWithPassword(**user)
 
     async def get_all_employees(self) -> tp.List[Employee]:
         """retrieves all employees"""
@@ -154,6 +153,9 @@ class MongoDbWrapper(metaclass=SingletonMeta):
 
     async def add_passport(self, passport: Passport) -> None:
         await self._add_document_to_collection(self._unit_collection, passport)
+
+    async def add_user(self, user: UserWithPassword) -> None:
+        await self._add_document_to_collection(self._credentials_collection, user)
 
     async def remove_employee(self, rfid_card_id: str) -> None:
         await self._remove_document_from_collection(self._employee_collection, key="rfid_card_id", value=rfid_card_id)

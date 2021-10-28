@@ -11,8 +11,15 @@ class BaseFilter(BaseModel):
 
 class User(BaseModel):
     username: str
-    hashed_password: str
     is_admin: bool
+
+
+class UserWithPassword(User):
+    hashed_password: str
+
+
+class NewUser(User):
+    password: str
 
 
 class TokenData(BaseModel):
