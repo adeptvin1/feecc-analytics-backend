@@ -60,6 +60,15 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             new_filter[key] = value
         return new_filter
 
+    @staticmethod
+    async def normalize_model(data: tp.Type[BaseModel]) -> tp.Dict[tp.Any, tp.Any]:
+        data_ = {}
+        for key, value in dict(data).items():
+            if value is None:
+                continue
+            data_[key] = value
+        return data_
+
     async def _get_all_from_collection(
         self, collection_: AsyncIOMotorCollection, model_: tp.Type[BaseModel], filter_: tp.Optional[BaseFilter] = None
     ) -> tp.List[BaseModel]:
@@ -154,6 +163,9 @@ class MongoDbWrapper(metaclass=SingletonMeta):
     async def add_passport(self, passport: Passport) -> None:
         await self._add_document_to_collection(self._unit_collection, passport)
 
+    async def add_stage(self, stage: ProductionStage) -> None:
+        await self._add_document_to_collection(self._prod_stage_collection, stage)
+
     async def add_user(self, user: UserWithPassword) -> None:
         await self._add_document_to_collection(self._credentials_collection, user)
 
@@ -162,3 +174,6 @@ class MongoDbWrapper(metaclass=SingletonMeta):
 
     async def remove_passport(self, internal_id: str) -> None:
         await self._remove_document_from_collection(self._unit_collection, key="internal_id", value=internal_id)
+
+    async def remove_stage(self, stage_id: str) -> None:
+        await self._remove_document_from_collection(self._prod_stage_collection, key="stage_id", value=stage_id)

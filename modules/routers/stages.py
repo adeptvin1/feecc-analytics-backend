@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 
 from ..database import MongoDbWrapper
 from ..models import ProductionStage, User
-from ..security import get_current_user
+from ..security import check_user_permissions, get_current_user
 from ..utils import decode_employee
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
@@ -22,6 +22,16 @@ async def get_production_stages(page: int = 1, items: int = 20, decode_employees
         for stage in stages:
             stage.employee_name = await decode_employee(employees, stage.employee_name)
     return {"count": documents_count, "data": stages[(page - 1) * items : page * items]}
+
+
+@router.post("/api/v1/stages", dependencies=[Depends(check_user_permissions)])
+async def create_new_stage(stage: ProductionStage) -> None:
+    await MongoDbWrapper().add_stage(stage)
+
+
+@router.delete("/api/v1/stages/{stage_id}", dependencies=[Depends(check_user_permissions)])
+async def remove_stage(stage_id: str) -> None:
+    await MongoDbWrapper().remove_stage(stage_id)
 
 
 @router.get("/api/v1/stages/{stage_id}")
