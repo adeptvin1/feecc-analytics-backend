@@ -1,6 +1,7 @@
 import os
 import typing as tp
 
+from functools import lru_cache
 from loguru import logger
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection, AsyncIOMotorCursor
 from pydantic import BaseModel
@@ -36,6 +37,8 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         self._credentials_collection: AsyncIOMotorCollection = self._database["Analytics-credentials"]
 
         logger.info("Connected to MongoDB")
+
+        self._decoded_employees: tp.Dict[str, Employee] = {}
 
     @staticmethod
     async def _remove_ids(cursor: AsyncIOMotorCursor) -> tp.List[tp.Dict[str, tp.Any]]:
@@ -96,9 +99,18 @@ class MongoDbWrapper(metaclass=SingletonMeta):
     async def _remove_document_from_collection(self, collection_: AsyncIOMotorCollection, key: str, value: str) -> None:
         await collection_.find_one_and_delete({key: value})
 
-    async def _get_fields_from_collection(collection_: AsyncIOMotorCollection):
-        # TODO: Implement schemas analyzer
-        pass
+    async def decode_employee(self, hashed_employee: str) -> tp.Optional[Employee]:
+        """Find an employee by hashed data"""
+        employee = self._decoded_employees.get(hashed_employee, None)
+        if employee is not None:
+            return employee
+        employees = await self.get_all_employees()
+        for employee in employees:
+            encoded_employee = await employee.encode_sha256()
+            if encoded_employee == hashed_employee:
+                self._decoded_employees[hashed_employee] = employee
+                return employee
+        return None
 
     async def get_concrete_employee(self, card_id: str) -> tp.Optional[Employee]:
         """retrieves an employee by card_id"""
@@ -134,9 +146,9 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         """retrieves all employees"""
         return await self._get_all_from_collection(self._employee_collection, model_=Employee)
 
-    async def get_all_passports(self, filter_: tp.Optional[BaseFilter] = None) -> tp.List[Passport]:
+    async def get_all_passports(self) -> tp.List[Passport]:
         """retrieves all passports"""
-        return await self._get_all_from_collection(self._unit_collection, model_=Passport, filter_=filter_)
+        return await self._get_all_from_collection(self._unit_collection, model_=Passport)
 
     async def get_all_stages(self) -> tp.List[ProductionStage]:
         """retrieves all production stages"""

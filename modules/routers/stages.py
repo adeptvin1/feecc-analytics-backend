@@ -5,7 +5,6 @@ from fastapi import APIRouter, Depends
 from ..database import MongoDbWrapper
 from ..models import ProductionStage, User
 from ..security import check_user_permissions, get_current_user
-from ..utils import decode_employee
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
 
@@ -18,9 +17,8 @@ async def get_production_stages(page: int = 1, items: int = 20, decode_employees
     stages = await MongoDbWrapper().get_all_stages()
     documents_count = await MongoDbWrapper().count_stages()
     if decode_employees:
-        employees = await MongoDbWrapper().get_all_employees()
         for stage in stages:
-            stage.employee_name = await decode_employee(employees, stage.employee_name)
+            stage.employee_name = await MongoDbWrapper().decode_employee(stage.employee_name)
     return {"count": documents_count, "data": stages[(page - 1) * items : page * items]}
 
 
