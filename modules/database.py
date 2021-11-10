@@ -1,12 +1,11 @@
 import os
 import typing as tp
 
-from functools import lru_cache
 from loguru import logger
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection, AsyncIOMotorCursor
 from pydantic import BaseModel
 
-from .models import BaseFilter, Employee, Passport, ProductionStage, User, UserWithPassword
+from .models import Employee, Passport, ProductionStage, User, UserWithPassword
 from .singleton import SingletonMeta
 
 DBModel = tp.Union[Employee, Passport, ProductionStage, User]
@@ -49,35 +48,14 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             result.append(doc)
         return result
 
-    @staticmethod
-    async def normalize_filter(filter: tp.Optional[BaseFilter]) -> tp.Dict[str, tp.Any]:
-        if not filter:
-            return {}
-        new_filter: tp.Dict[str, tp.Any] = {}
-        for key, value in dict(filter).items():
-            if value is None:
-                continue
-            if isinstance(value, list):
-                new_filter[key] = {"$in": value}
-                continue
-            new_filter[key] = value
-        return new_filter
-
-    @staticmethod
-    async def normalize_model(data: tp.Type[BaseModel]) -> tp.Dict[tp.Any, tp.Any]:
-        data_ = {}
-        for key, value in dict(data).items():
-            if value is None:
-                continue
-            data_[key] = value
-        return data_
-
     async def _get_all_from_collection(
-        self, collection_: AsyncIOMotorCollection, model_: tp.Type[BaseModel], filter_: tp.Optional[BaseFilter] = None
+        self, collection_: AsyncIOMotorCollection, model_: tp.Type[BaseModel]
     ) -> tp.List[BaseModel]:
         """retrieves all documents from the specified collection"""
-        normalized_filter = await self.normalize_filter(filter_)
-        return [model_(**_) for _ in await collection_.find(normalized_filter, {"_id": 0}).to_list(length=None)]
+        return tp.cast(
+            tp.List[BaseModel],
+            [model_(**_) for _ in await collection_.find({}, {"_id": 0}).to_list(length=None)],
+        )
 
     async def _get_element_by_key(
         self, collection_: AsyncIOMotorCollection, key: str, value: str
@@ -86,14 +64,11 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         result: tp.Dict[str, tp.Any] = await collection_.find_one({key: value}, {"_id": 0})
         return result
 
-    async def _count_documents_in_collection(
-        self, collection_: AsyncIOMotorCollection, filter_: tp.Optional[tp.Dict[str, tp.Any]]
-    ) -> int:
-        normalized_filter = await self.normalize_filter(filter_)
-        count: int = await collection_.count_documents(normalized_filter)
+    async def _count_documents_in_collection(self, collection_: AsyncIOMotorCollection) -> int:
+        count: int = await collection_.count_documents({})
         return count
 
-    async def _add_document_to_collection(self, collection_: AsyncIOMotorCollection, item_: tp.Type[BaseModel]) -> None:
+    async def _add_document_to_collection(self, collection_: AsyncIOMotorCollection, item_: BaseModel) -> None:
         await collection_.insert_one(dict(item_))
 
     async def _remove_document_from_collection(self, collection_: AsyncIOMotorCollection, key: str, value: str) -> None:
@@ -144,29 +119,32 @@ class MongoDbWrapper(metaclass=SingletonMeta):
 
     async def get_all_employees(self) -> tp.List[Employee]:
         """retrieves all employees"""
-        return await self._get_all_from_collection(self._employee_collection, model_=Employee)
+        return tp.cast(
+            tp.List[Employee], await self._get_all_from_collection(self._employee_collection, model_=Employee)
+        )
 
     async def get_all_passports(self) -> tp.List[Passport]:
         """retrieves all passports"""
-        return await self._get_all_from_collection(self._unit_collection, model_=Passport)
+        return tp.cast(tp.List[Passport], await self._get_all_from_collection(self._unit_collection, model_=Passport))
 
     async def get_all_stages(self) -> tp.List[ProductionStage]:
         """retrieves all production stages"""
-        return await self._get_all_from_collection(self._prod_stage_collection, model_=ProductionStage)
-
-    async def count_employees(self, filter_: tp.Optional[BaseFilter] = None) -> int:
-        """count documents in employee collection"""
-        return await self._count_documents_in_collection(
-            self._employee_collection, await self.normalize_filter(filter_)
+        return tp.cast(
+            tp.List[ProductionStage],
+            await self._get_all_from_collection(self._prod_stage_collection, model_=ProductionStage),
         )
 
-    async def count_passports(self, filter_: tp.Optional[BaseFilter] = None) -> int:
+    async def count_employees(self) -> int:
         """count documents in employee collection"""
-        return await self._count_documents_in_collection(self._unit_collection, await self.normalize_filter(filter_))
+        return await self._count_documents_in_collection(self._employee_collection)
 
-    async def count_stages(self, filter_: tp.Optional[BaseFilter] = None) -> int:
+    async def count_passports(self) -> int:
         """count documents in employee collection"""
-        return await self._count_documents_in_collection(self._unit_collection, await self.normalize_filter(filter_))
+        return await self._count_documents_in_collection(self._unit_collection)
+
+    async def count_stages(self) -> int:
+        """count documents in employee collection"""
+        return await self._count_documents_in_collection(self._unit_collection)
 
     async def add_employee(self, employee: Employee) -> None:
         """add employee to database"""
