@@ -4,14 +4,14 @@ from fastapi import APIRouter, Depends
 
 from modules.database import MongoDbWrapper
 
-from ..models import NewUser, User, UserWithPassword
+from ..models import User, UserWithPassword
 from ..security import create_new_user, get_current_user, get_password_hash
 
 router = APIRouter()
 
 
 @router.get("/api/v1/users/me")
-async def read_users_me(user: User = Depends(get_current_user)) -> tp.Dict[str, tp.Any]:
+async def read_users_me(user: User = Depends(get_current_user)) -> User:
     """Returns various information about current user by token"""
     return user
 

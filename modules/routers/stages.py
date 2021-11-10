@@ -3,7 +3,7 @@ import typing as tp
 from fastapi import APIRouter, Depends
 
 from ..database import MongoDbWrapper
-from ..models import ProductionStage, User
+from ..models import ProductionStage
 from ..security import check_user_permissions, get_current_user
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
@@ -18,6 +18,8 @@ async def get_production_stages(page: int = 1, items: int = 20, decode_employees
     documents_count = await MongoDbWrapper().count_stages()
     if decode_employees:
         for stage in stages:
+            if not isinstance(stage.employee_name, str):
+                continue
             stage.employee_name = await MongoDbWrapper().decode_employee(stage.employee_name)
     return {"count": documents_count, "data": stages[(page - 1) * items : page * items]}
 

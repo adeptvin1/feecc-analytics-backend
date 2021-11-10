@@ -4,8 +4,8 @@ import httpx
 from fastapi import APIRouter, Depends
 from yaml import YAMLError
 
-from ..security import get_current_user
 from ..exceptions import ConnectionTimeoutException, IncorrectAddressException, ParserException, UnhandledException
+from ..security import get_current_user
 from ..utils import load_yaml
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
