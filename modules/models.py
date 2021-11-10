@@ -81,6 +81,15 @@ class ProductionStage(BaseModel):
     creation_time: tp.Optional[datetime]
 
 
+class ProductionStagesOut(GenericResponse):
+    count: int
+    data: tp.List[ProductionStage]
+
+
+class ProductionStageOut(GenericResponse):
+    stage: tp.Optional[ProductionStage]
+
+
 class IPFSData(BaseModel):
     id: str
     model: str
