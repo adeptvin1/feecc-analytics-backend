@@ -80,3 +80,14 @@ class ForbiddenActionException(HTTPException):
         self.headers = {"WWW-Authenticate": "Bearer"}
 
         logger.warning(f"{self.detail} : {kwargs}")
+
+
+class DatabaseException(HTTPException):
+    def __init__(self, **kwargs: tp.Any) -> None:
+        self.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        self.detail = (
+            f"an exception occured while trying to write data to database: {kwargs.get('error', None) or 'unhandled'}"
+        )
+        self.headers = {"WWW-Authenticate": "Bearer"}
+
+        logger.warning(f"{self.detail} : {kwargs}")

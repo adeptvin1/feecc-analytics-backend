@@ -5,8 +5,9 @@ from datetime import datetime
 from pydantic import BaseModel
 
 
-class BaseFilter(BaseModel):
-    pass
+class GenericResponse(BaseModel):
+    status_code: int = 200
+    detail: tp.Optional[str] = "Successful"
 
 
 class User(BaseModel):
@@ -39,21 +40,12 @@ class Passport(BaseModel):
     is_in_db: bool
 
 
-class PassportsFilter(BaseFilter):
-    model: tp.Optional[tp.List[str]]
-    uuid: tp.Optional[str]
-    internal_id: tp.Optional[str]
-    passport_short_url: tp.Optional[str]
-    is_in_db: tp.Optional[str]
-
-
 class Employee(BaseModel):
     rfid_card_id: str
     name: str
     position: str
 
     async def compose(self) -> str:
-        print(" ".join([self.rfid_card_id, self.name, self.position]))
         return " ".join([self.rfid_card_id, self.name, self.position])
 
     async def encode_sha256(self) -> str:
@@ -67,12 +59,21 @@ class EncodedEmployee(BaseModel):
     encoded_name: str
 
 
+class EmployeesOut(GenericResponse):
+    count: int
+    data: tp.Optional[tp.List[Employee]]
+
+
+class EmployeeOut(GenericResponse):
+    employee: tp.Optional[Employee]
+
+
 class ProductionStage(BaseModel):
     name: str
-    employee_name: str
+    employee_name: tp.Optional[tp.Union[str, Employee]]
     parent_unit_uuid: str
     session_start_time: str
-    session_end_time: str
+    session_end_time: tp.Optional[str]
     video_hashes: tp.Optional[tp.List[str]]
     additional_info: tp.Dict[tp.Any, tp.Any]
     id: str
