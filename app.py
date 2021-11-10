@@ -14,7 +14,7 @@ api.add_middleware(
     allow_headers=["*"],
 )
 
-api.include_router(employees.router, tags=["employees"])
+api.include_router(employees.router, prefix="/api/v1/employees", tags=["employees"])
 api.include_router(passports.router, tags=["passports"])
 api.include_router(stages.router, tags=["stages"])
 api.include_router(users.router, tags=["user-management"])
