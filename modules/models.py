@@ -40,6 +40,15 @@ class Passport(BaseModel):
     is_in_db: bool
 
 
+class PassportsOut(GenericResponse):
+    count: int
+    data: tp.List[Passport]
+
+
+class PassportOut(GenericResponse):
+    passport: tp.Optional[Passport]
+
+
 class Employee(BaseModel):
     rfid_card_id: str
     name: str
