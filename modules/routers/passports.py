@@ -19,7 +19,9 @@ async def get_all_passports(page: int = 1, items: int = 20) -> PassportsOut:
         passports = await MongoDbWrapper().get_all_passports()
         documents_count = await MongoDbWrapper().count_passports()
     except Exception as exception_message:
+        print(exception_message)
         raise DatabaseException(error=exception_message)
+
     return PassportsOut(count=documents_count, data=passports[(page - 1) * items : page * items])
 
 

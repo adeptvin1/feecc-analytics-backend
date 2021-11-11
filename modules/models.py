@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 import hashlib
 import typing as tp
+from uuid import uuid4
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class GenericResponse(BaseModel):
@@ -32,21 +35,21 @@ class Token(BaseModel):
     token_type: str
 
 
-class Passport(BaseModel):
-    model: str
-    uuid: str
-    internal_id: str
-    passport_short_url: tp.Optional[str]
-    is_in_db: bool
+class ProductionSchemaStage(BaseModel):
+    name: str
+    type: tp.Optional[str]
+    description: tp.Optional[str]
+    equipment: tp.Optional[tp.List[str]]
+    workplace: tp.Optional[str]
+    duration_seconds: tp.Optional[int]
 
 
-class PassportsOut(GenericResponse):
-    count: int
-    data: tp.List[Passport]
-
-
-class PassportOut(GenericResponse):
-    passport: tp.Optional[Passport]
+class ProductionSchema(BaseModel):
+    schema_id: str = Field(default_factory=lambda: uuid4().hex)
+    unit_name: str
+    production_stages: tp.Optional[tp.List[ProductionSchemaStage]]
+    required_components_schema_ids: tp.Optional[tp.List[str]]
+    parent_schema_id: tp.Optional[str]
 
 
 class Employee(BaseModel):
@@ -64,19 +67,6 @@ class Employee(BaseModel):
         return employee_passport_code
 
 
-class EncodedEmployee(BaseModel):
-    encoded_name: str
-
-
-class EmployeesOut(GenericResponse):
-    count: int
-    data: tp.Optional[tp.List[Employee]]
-
-
-class EmployeeOut(GenericResponse):
-    employee: tp.Optional[Employee]
-
-
 class ProductionStage(BaseModel):
     name: str
     employee_name: tp.Optional[tp.Union[str, Employee]]
@@ -88,6 +78,50 @@ class ProductionStage(BaseModel):
     id: str
     is_in_db: bool
     creation_time: tp.Optional[datetime]
+
+
+class Barcode(BaseModel):
+    unit_code: tp.Optional[str]
+    barcode: tp.Optional[str]
+    basename: tp.Optional[str]
+    filename: tp.Optional[str]
+
+
+class Passport(BaseModel):
+    model: str
+    uuid: str
+    internal_id: str
+    passport_short_url: tp.Optional[str]
+    is_in_db: bool
+    _schema: tp.Annotated[tp.Optional[ProductionSchema], Field(alias="schema")]
+    biography: tp.Optional[tp.List[ProductionStage]]
+    components_units: tp.Optional[tp.Dict[str, tp.Any]] = None
+    featured_in_int_id: tp.Optional[str]
+    passport_short_url: tp.Optional[str]
+    barcode: tp.Optional[Barcode]
+    model: tp.Optional[str] = None
+
+
+class PassportsOut(GenericResponse):
+    count: int
+    data: tp.List[Passport]
+
+
+class PassportOut(GenericResponse):
+    passport: tp.Optional[Passport]
+
+
+class EncodedEmployee(BaseModel):
+    encoded_name: str
+
+
+class EmployeesOut(GenericResponse):
+    count: int
+    data: tp.Optional[tp.List[Employee]]
+
+
+class EmployeeOut(GenericResponse):
+    employee: tp.Optional[Employee]
 
 
 class ProductionStagesOut(GenericResponse):
