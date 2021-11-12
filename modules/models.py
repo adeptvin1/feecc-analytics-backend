@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import hashlib
 import typing as tp
-from uuid import uuid4
 from datetime import datetime
+from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
@@ -16,6 +16,10 @@ class GenericResponse(BaseModel):
 class User(BaseModel):
     username: str
     is_admin: bool
+
+
+class UserOut(GenericResponse):
+    user: User
 
 
 class UserWithPassword(User):
