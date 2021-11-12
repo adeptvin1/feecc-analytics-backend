@@ -92,7 +92,6 @@ class Barcode(BaseModel):
 
 
 class Passport(BaseModel):
-    model: str
     uuid: str
     internal_id: str
     passport_short_url: tp.Optional[str]
@@ -101,7 +100,6 @@ class Passport(BaseModel):
     biography: tp.Optional[tp.List[ProductionStage]]
     components_units: tp.Optional[tp.Dict[str, tp.Any]] = None
     featured_in_int_id: tp.Optional[str]
-    passport_short_url: tp.Optional[str]
     barcode: tp.Optional[Barcode]
     model: tp.Optional[str] = None
 

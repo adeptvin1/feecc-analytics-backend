@@ -10,7 +10,7 @@ from ..security import check_user_permissions, get_current_user
 router = APIRouter(dependencies=[Depends(get_current_user)])
 
 
-@router.get("/api/v1/stages", response_model=tp.Union[ProductionStagesOut, GenericResponse])
+@router.get("/api/v1/stages", response_model=tp.Union[ProductionStagesOut, GenericResponse])  # type:ignore
 async def get_production_stages(page: int = 1, items: int = 20, decode_employees: bool = False) -> ProductionStagesOut:
     """
     Endpoint to get list of all production stages from :start: to :limit:. By default, from 0 to 20.
@@ -29,7 +29,7 @@ async def get_production_stages(page: int = 1, items: int = 20, decode_employees
 
 
 @router.post("/api/v1/stages", dependencies=[Depends(check_user_permissions)], response_model=GenericResponse)
-async def create_new_stage(stage: ProductionStage) -> None:
+async def create_new_stage(stage: ProductionStage) -> GenericResponse:
     try:
         await MongoDbWrapper().add_stage(stage)
     except Exception as exception_message:
@@ -40,7 +40,7 @@ async def create_new_stage(stage: ProductionStage) -> None:
 @router.delete(
     "/api/v1/stages/{stage_id}", dependencies=[Depends(check_user_permissions)], response_model=GenericResponse
 )
-async def remove_stage(stage_id: str) -> None:
+async def remove_stage(stage_id: str) -> GenericResponse:
     try:
         await MongoDbWrapper().remove_stage(stage_id)
     except Exception as exception_message:
@@ -48,8 +48,8 @@ async def remove_stage(stage_id: str) -> None:
     return GenericResponse(detail=f"Deleted stage with id {stage_id}")
 
 
-@router.get("/api/v1/stages/{stage_id}", response_model=tp.Union[ProductionStageOut, GenericResponse])
-async def get_stage_by_id(stage_id: str) -> tp.Optional[ProductionStage]:
+@router.get("/api/v1/stages/{stage_id}", response_model=tp.Union[ProductionStageOut, GenericResponse])  # type:ignore
+async def get_stage_by_id(stage_id: str) -> ProductionStageOut:
     """Endpoint to get information about concrete production stage"""
     try:
         stage = await MongoDbWrapper().get_concrete_stage(stage_id)

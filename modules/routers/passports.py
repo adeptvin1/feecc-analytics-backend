@@ -10,7 +10,7 @@ from ..security import check_user_permissions, get_current_user
 router = APIRouter(dependencies=[Depends(get_current_user)])
 
 
-@router.get("/api/v1/passports", response_model=tp.Union[PassportsOut, GenericResponse])
+@router.get("/api/v1/passports", response_model=tp.Union[PassportsOut, GenericResponse])  # type:ignore
 async def get_all_passports(page: int = 1, items: int = 20) -> PassportsOut:
     """
     Endpoint to get list of all issued passports from :start: to :limit:. By default, from 0 to 20.
@@ -26,7 +26,7 @@ async def get_all_passports(page: int = 1, items: int = 20) -> PassportsOut:
 
 
 @router.post("/api/v1/passports", dependencies=[Depends(check_user_permissions)], response_model=GenericResponse)
-async def create_new_passport(passport: Passport) -> None:
+async def create_new_passport(passport: Passport) -> GenericResponse:
     """Endpoint to create a new passport"""
     try:
         await MongoDbWrapper().add_passport(passport)
@@ -38,7 +38,7 @@ async def create_new_passport(passport: Passport) -> None:
 @router.delete(
     "/api/v1/passports/{internal_id}", dependencies=[Depends(check_user_permissions)], response_model=GenericResponse
 )
-async def delete_passport(internal_id: str) -> None:
+async def delete_passport(internal_id: str) -> GenericResponse:
     """Endpoint to delete an existing passport from database"""
     try:
         await MongoDbWrapper().remove_passport(internal_id)
@@ -47,8 +47,8 @@ async def delete_passport(internal_id: str) -> None:
     return GenericResponse(detail="Deleted passport")
 
 
-@router.get("/api/v1/passports/{internal_id}", response_model=tp.Union[PassportOut, GenericResponse])
-async def get_passport_by_internal_id(internal_id: str) -> tp.Optional[Passport]:
+@router.get("/api/v1/passports/{internal_id}", response_model=tp.Union[PassportOut, GenericResponse])  # type:ignore
+async def get_passport_by_internal_id(internal_id: str) -> PassportOut:
     """Endpoint to get information about concrete issued passport"""
     try:
         passport = await MongoDbWrapper().get_concrete_passport(internal_id)

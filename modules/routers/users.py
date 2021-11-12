@@ -10,8 +10,8 @@ from ..security import check_user_permissions, create_new_user, get_current_user
 router = APIRouter()
 
 
-@router.get("/api/v1/users/me", response_model=tp.Union[UserOut, GenericResponse])
-async def read_users_me(user: User = Depends(get_current_user)) -> User:
+@router.get("/api/v1/users/me", response_model=tp.Union[UserOut, GenericResponse])  # type:ignore
+async def read_users_me(user: User = Depends(get_current_user)) -> UserOut:
     """Returns various information about current user by token"""
     return UserOut(user=user)
 
@@ -29,7 +29,7 @@ async def register_new_user(user: UserWithPassword = Depends(create_new_user)) -
 @router.get(
     "/api/v1/users/{username}",
     dependencies=[Depends(get_current_user)],
-    response_model=tp.Union[UserOut, GenericResponse],
+    response_model=tp.Union[UserOut, GenericResponse],  # type:ignore
 )
 async def get_user_data(username: str) -> UserOut:
     """Get information about concrete user"""

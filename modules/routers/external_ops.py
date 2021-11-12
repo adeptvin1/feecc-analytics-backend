@@ -12,8 +12,8 @@ router = APIRouter(dependencies=[Depends(get_current_user)])
 
 
 @router.get("/api/v1/ipfs_decode")
-async def parse_ipfs_link(link: str) -> str:
-    """ Extracts saved passport from IPFS/Pinata """
+async def parse_ipfs_link(link: str) -> tp.Any:
+    """Extracts saved passport from IPFS/Pinata"""
     if not link.startswith(("http://", "https://")):
         raise IncorrectAddressException
 
