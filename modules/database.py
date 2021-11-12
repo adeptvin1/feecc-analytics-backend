@@ -37,7 +37,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
 
         logger.info("Connected to MongoDB")
 
-        self._decoded_employees: tp.Dict[str, Employee] = {}
+        self._decoded_employees: tp.Dict[str, tp.Optional[Employee]] = {}
 
     @staticmethod
     async def _remove_ids(cursor: AsyncIOMotorCursor) -> tp.List[tp.Dict[str, tp.Any]]:

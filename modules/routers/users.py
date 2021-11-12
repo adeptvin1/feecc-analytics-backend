@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from ..database import MongoDbWrapper
 from ..exceptions import DatabaseException
 from ..models import GenericResponse, User, UserOut, UserWithPassword
-from ..security import create_new_user, get_current_user
+from ..security import check_user_permissions, create_new_user, get_current_user
 
 router = APIRouter()
 
@@ -16,7 +16,7 @@ async def read_users_me(user: User = Depends(get_current_user)) -> User:
     return UserOut(user=user)
 
 
-@router.post("/api/v1/users", response_model=GenericResponse)
+@router.post("/api/v1/users", response_model=GenericResponse, dependencies=[Depends(check_user_permissions)])
 async def register_new_user(user: UserWithPassword = Depends(create_new_user)) -> GenericResponse:
     """Endpoint to create new user"""
     try:
@@ -24,3 +24,32 @@ async def register_new_user(user: UserWithPassword = Depends(create_new_user)) -
     except Exception as exception_message:
         raise DatabaseException(error=exception_message)
     return GenericResponse(detail="Created new user")
+
+
+@router.get(
+    "/api/v1/users/{username}",
+    dependencies=[Depends(get_current_user)],
+    response_model=tp.Union[UserOut, GenericResponse],
+)
+async def get_user_data(username: str) -> UserOut:
+    """Get information about concrete user"""
+    try:
+        user = await MongoDbWrapper().get_concrete_user(username)
+    except Exception as exception_message:
+        raise DatabaseException(error=exception_message)
+    return UserOut(user=user)
+
+
+@router.delete(
+    "/api/v1/users/{username}",
+    dependencies=[Depends(check_user_permissions)],
+    response_model=GenericResponse,
+)
+async def delete_user(username: str) -> GenericResponse:
+    """Delete concrete user"""
+    # TODO
+    try:
+        pass
+    except Exception as exception_message:
+        raise DatabaseException(error=exception_message)
+    return GenericResponse(detail="Deleted user")

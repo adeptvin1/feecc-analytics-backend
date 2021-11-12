@@ -2,9 +2,8 @@ import typing as tp
 
 from fastapi import APIRouter, Depends
 
-from modules.exceptions import DatabaseException
-
 from ..database import MongoDbWrapper
+from ..exceptions import DatabaseException
 from ..models import Employee, EmployeeOut, EmployeesOut, EncodedEmployee, GenericResponse
 from ..security import check_user_permissions, get_current_user
 
