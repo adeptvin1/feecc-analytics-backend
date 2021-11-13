@@ -10,13 +10,13 @@ from ..security import check_user_permissions, create_new_user, get_current_user
 router = APIRouter()
 
 
-@router.get("/api/v1/users/me", response_model=tp.Union[UserOut, GenericResponse])  # type:ignore
+@router.get("/me", response_model=tp.Union[UserOut, GenericResponse])  # type:ignore
 async def read_users_me(user: User = Depends(get_current_user)) -> UserOut:
     """Returns various information about current user by token"""
     return UserOut(user=user)
 
 
-@router.post("/api/v1/users", response_model=GenericResponse, dependencies=[Depends(check_user_permissions)])
+@router.post("/", response_model=GenericResponse, dependencies=[Depends(check_user_permissions)])
 async def register_new_user(user: UserWithPassword = Depends(create_new_user)) -> GenericResponse:
     """Endpoint to create new user"""
     try:
@@ -27,7 +27,7 @@ async def register_new_user(user: UserWithPassword = Depends(create_new_user)) -
 
 
 @router.get(
-    "/api/v1/users/{username}",
+    "/{username}",
     dependencies=[Depends(get_current_user)],
     response_model=tp.Union[UserOut, GenericResponse],  # type:ignore
 )
@@ -41,7 +41,7 @@ async def get_user_data(username: str) -> UserOut:
 
 
 @router.delete(
-    "/api/v1/users/{username}",
+    "/{username}",
     dependencies=[Depends(check_user_permissions)],
     response_model=GenericResponse,
 )

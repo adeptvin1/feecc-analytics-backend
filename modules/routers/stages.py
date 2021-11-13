@@ -10,7 +10,7 @@ from ..security import check_user_permissions, get_current_user
 router = APIRouter(dependencies=[Depends(get_current_user)])
 
 
-@router.get("/api/v1/stages", response_model=tp.Union[ProductionStagesOut, GenericResponse])  # type:ignore
+@router.get("/", response_model=tp.Union[ProductionStagesOut, GenericResponse])  # type:ignore
 async def get_production_stages(page: int = 1, items: int = 20, decode_employees: bool = False) -> ProductionStagesOut:
     """
     Endpoint to get list of all production stages from :start: to :limit:. By default, from 0 to 20.
@@ -28,7 +28,7 @@ async def get_production_stages(page: int = 1, items: int = 20, decode_employees
         raise DatabaseException(error=exception_message)
 
 
-@router.post("/api/v1/stages", dependencies=[Depends(check_user_permissions)], response_model=GenericResponse)
+@router.post("/", dependencies=[Depends(check_user_permissions)], response_model=GenericResponse)
 async def create_new_stage(stage: ProductionStage) -> GenericResponse:
     try:
         await MongoDbWrapper().add_stage(stage)
@@ -37,9 +37,7 @@ async def create_new_stage(stage: ProductionStage) -> GenericResponse:
     return GenericResponse(detail="Created new production stage")
 
 
-@router.delete(
-    "/api/v1/stages/{stage_id}", dependencies=[Depends(check_user_permissions)], response_model=GenericResponse
-)
+@router.delete("/{stage_id}", dependencies=[Depends(check_user_permissions)], response_model=GenericResponse)
 async def remove_stage(stage_id: str) -> GenericResponse:
     try:
         await MongoDbWrapper().remove_stage(stage_id)
@@ -48,7 +46,7 @@ async def remove_stage(stage_id: str) -> GenericResponse:
     return GenericResponse(detail=f"Deleted stage with id {stage_id}")
 
 
-@router.get("/api/v1/stages/{stage_id}", response_model=tp.Union[ProductionStageOut, GenericResponse])  # type:ignore
+@router.get("/{stage_id}", response_model=tp.Union[ProductionStageOut, GenericResponse])  # type:ignore
 async def get_stage_by_id(stage_id: str) -> ProductionStageOut:
     """Endpoint to get information about concrete production stage"""
     try:
