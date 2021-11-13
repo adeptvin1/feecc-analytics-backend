@@ -5,7 +5,7 @@ from loguru import logger
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection, AsyncIOMotorCursor
 from pydantic import BaseModel
 
-from .models import Employee, Passport, ProductionStage, User, UserWithPassword
+from .models import Employee, Passport, ProductionSchema, ProductionStage, User, UserWithPassword
 from .singleton import SingletonMeta
 
 DBModel = tp.Union[Employee, Passport, ProductionStage, User]
@@ -34,6 +34,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         self._unit_collection: AsyncIOMotorCollection = self._database["Unit-data"]
         self._prod_stage_collection: AsyncIOMotorCollection = self._database["Production-stages-data"]
         self._credentials_collection: AsyncIOMotorCollection = self._database["Analytics-credentials"]
+        self._schemas_collection: AsyncIOMotorCollection = self._database["Production-schemas"]
 
         logger.info("Connected to MongoDB")
 
@@ -69,7 +70,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         return count
 
     async def _add_document_to_collection(self, collection_: AsyncIOMotorCollection, item_: BaseModel) -> None:
-        await collection_.insert_one(dict(item_))
+        await collection_.insert_one(item_.dict())
 
     async def _remove_document_from_collection(self, collection_: AsyncIOMotorCollection, key: str, value: str) -> None:
         await collection_.find_one_and_delete({key: value})
@@ -109,13 +110,17 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         return ProductionStage(**production_stage)
 
     async def get_concrete_user(self, username: tp.Optional[str]) -> tp.Optional[UserWithPassword]:
-        """retrieves information about analytics user"""
+        """retrieves information about analytics user by username"""
         if not username:
             raise ValueError("No username provided")
         user = await self._get_element_by_key(self._credentials_collection, key="username", value=username)
         if not user:
             return None
         return UserWithPassword(**user)
+
+    async def get_concrete_schema(self, schema_id: str) -> tp.Optional[ProductionSchema]:
+        """retrieves information about production schema"""
+        return await self._get_element_by_key(self._schemas_collection, key="schema_id", value=schema_id)
 
     async def get_all_employees(self) -> tp.List[Employee]:
         """retrieves all employees"""
@@ -134,6 +139,13 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             await self._get_all_from_collection(self._prod_stage_collection, model_=ProductionStage),
         )
 
+    async def get_all_schemas(self) -> tp.List[ProductionSchema]:
+        """retrieves all production schemas"""
+        return tp.cast(
+            tp.List[ProductionSchema],
+            await self._get_all_from_collection(self._schemas_collection, model_=ProductionSchema),
+        )
+
     async def count_employees(self) -> int:
         """count documents in employee collection"""
         return await self._count_documents_in_collection(self._employee_collection)
@@ -145,6 +157,10 @@ class MongoDbWrapper(metaclass=SingletonMeta):
     async def count_stages(self) -> int:
         """count documents in employee collection"""
         return await self._count_documents_in_collection(self._unit_collection)
+
+    async def count_schemas(self) -> int:
+        """count documents in schemas collection"""
+        return await self._count_documents_in_collection(self._schemas_collection)
 
     async def add_employee(self, employee: Employee) -> None:
         """add employee to database"""
@@ -159,6 +175,9 @@ class MongoDbWrapper(metaclass=SingletonMeta):
     async def add_user(self, user: UserWithPassword) -> None:
         await self._add_document_to_collection(self._credentials_collection, user)
 
+    async def add_schema(self, schema: ProductionSchema) -> None:
+        await self._add_document_to_collection(self._schemas_collection, schema)
+
     async def remove_employee(self, rfid_card_id: str) -> None:
         await self._remove_document_from_collection(self._employee_collection, key="rfid_card_id", value=rfid_card_id)
 
@@ -167,3 +186,6 @@ class MongoDbWrapper(metaclass=SingletonMeta):
 
     async def remove_stage(self, stage_id: str) -> None:
         await self._remove_document_from_collection(self._prod_stage_collection, key="stage_id", value=stage_id)
+
+    async def remove_schema(self, schema_id: str) -> None:
+        await self._remove_document_from_collection(self._schemas_collection, key="schema_id", value=schema_id)
