@@ -18,6 +18,13 @@ By default, access port is `5002`.
 
 ## API
 
+
+For more information about endpoints, data flows and main operations, go to `http://<HOST>:<PORT>/docs`
+
+
+<details>
+<summary>Endpoints usage examples</summary>
+<br>
 ### Security
 
 - /token
@@ -85,3 +92,4 @@ By default, access port is `5002`.
     GET: Information about passport by its stage_id
 
     Example: GET on /api/v1/stages/zxc1 returns `{"name": "stage","employee_name": "hashed_employee","parent_unit_uuid": "kldsjl1","session_start_time": "03-09-2021 17:04:05","session_end_time": "03-09-2021 17:04:07","video_hashes":["some_ipfs_hashes"],"additional_info": {}, "id": "zxc1", "is_in_db": true,"creation_time": "2021-09-03T14:04:05.360000"}`
+</details>
