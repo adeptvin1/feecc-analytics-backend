@@ -66,13 +66,16 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         return result
 
     async def _count_documents_in_collection(self, collection_: AsyncIOMotorCollection) -> int:
+        """Count documents in given collection"""
         count: int = await collection_.count_documents({})
         return count
 
     async def _add_document_to_collection(self, collection_: AsyncIOMotorCollection, item_: BaseModel) -> None:
+        """Push document to given MongoDB collection"""
         await collection_.insert_one(item_.dict())
 
     async def _remove_document_from_collection(self, collection_: AsyncIOMotorCollection, key: str, value: str) -> None:
+        """Remove document from collection by {key:value}"""
         await collection_.find_one_and_delete({key: value})
 
     async def decode_employee(self, hashed_employee: str) -> tp.Optional[Employee]:
@@ -170,25 +173,33 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         await self._add_document_to_collection(self._employee_collection, employee)
 
     async def add_passport(self, passport: Passport) -> None:
+        """add passport to database"""
         await self._add_document_to_collection(self._unit_collection, passport)
 
     async def add_stage(self, stage: ProductionStage) -> None:
+        """add stage to database"""
         await self._add_document_to_collection(self._prod_stage_collection, stage)
 
     async def add_user(self, user: UserWithPassword) -> None:
+        """add user to database"""
         await self._add_document_to_collection(self._credentials_collection, user)
 
     async def add_schema(self, schema: ProductionSchema) -> None:
+        """add production schema to database"""
         await self._add_document_to_collection(self._schemas_collection, schema)
 
     async def remove_employee(self, rfid_card_id: str) -> None:
+        """remove employee from database"""
         await self._remove_document_from_collection(self._employee_collection, key="rfid_card_id", value=rfid_card_id)
 
     async def remove_passport(self, internal_id: str) -> None:
+        """remove passport (unit) from database"""
         await self._remove_document_from_collection(self._unit_collection, key="internal_id", value=internal_id)
 
     async def remove_stage(self, stage_id: str) -> None:
+        """remove production stage from database"""
         await self._remove_document_from_collection(self._prod_stage_collection, key="stage_id", value=stage_id)
 
     async def remove_schema(self, schema_id: str) -> None:
+        """remove production schema from database"""
         await self._remove_document_from_collection(self._schemas_collection, key="schema_id", value=schema_id)
