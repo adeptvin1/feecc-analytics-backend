@@ -120,7 +120,10 @@ class MongoDbWrapper(metaclass=SingletonMeta):
 
     async def get_concrete_schema(self, schema_id: str) -> tp.Optional[ProductionSchema]:
         """retrieves information about production schema"""
-        return await self._get_element_by_key(self._schemas_collection, key="schema_id", value=schema_id)
+        schema = await self._get_element_by_key(self._schemas_collection, key="schema_id", value=schema_id)
+        if schema is None:
+            return None
+        return ProductionSchema(**schema)
 
     async def get_all_employees(self) -> tp.List[Employee]:
         """retrieves all employees"""
