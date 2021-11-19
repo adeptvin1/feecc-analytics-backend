@@ -15,11 +15,11 @@ class GenericResponse(BaseModel):
 
 class User(BaseModel):
     username: str
-    is_admin: bool
+    is_admin: bool = False
 
 
 class UserOut(GenericResponse):
-    user: User
+    user: tp.Optional[User]
 
 
 class UserWithPassword(User):

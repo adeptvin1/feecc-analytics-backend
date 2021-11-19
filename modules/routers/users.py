@@ -46,10 +46,9 @@ async def get_user_data(username: str) -> UserOut:
     response_model=GenericResponse,
 )
 async def delete_user(username: str) -> GenericResponse:
-    """Delete concrete user"""
-    # TODO
+    """Delete concrete user by username"""
     try:
-        pass
+        await MongoDbWrapper().remove_user(username)
     except Exception as exception_message:
         raise DatabaseException(error=exception_message)
     return GenericResponse(detail="Deleted user")

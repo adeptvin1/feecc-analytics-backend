@@ -2,7 +2,6 @@ import typing as tp
 
 from fastapi import HTTPException, status
 from loguru import logger
-from starlette.status import HTTP_408_REQUEST_TIMEOUT
 
 
 class AuthException(HTTPException):
