@@ -17,7 +17,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
     def __init__(self) -> None:
         """connect to database using credentials"""
         logger.info("Connecting to MongoDB")
-        mongo_client_url: str = str(os.getenv("MONGO_CONNECTION_URL")) + "&ssl=true&ssl_cert_reqs=CERT_NONE"
+        mongo_client_url: str = str(os.getenv("MONGO_CONNECTION_URL")) + "&ssl=true&tlsAllowInvalidCertificates=true"
 
         print(mongo_client_url)
 
@@ -199,6 +199,10 @@ class MongoDbWrapper(metaclass=SingletonMeta):
     async def remove_stage(self, stage_id: str) -> None:
         """remove production stage from database"""
         await self._remove_document_from_collection(self._prod_stage_collection, key="stage_id", value=stage_id)
+
+    async def remove_user(self, username: str) -> None:
+        """remove user by username from database"""
+        await self._remove_document_from_collection(self._credentials_collection, key="username", value=username)
 
     async def remove_schema(self, schema_id: str) -> None:
         """remove production schema from database"""
