@@ -5,10 +5,8 @@ from loguru import logger
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection, AsyncIOMotorCursor
 from pydantic import BaseModel
 
-from .models import Employee, Passport, ProductionSchema, ProductionStage, User, UserWithPassword
+from .models import Employee, Passport, ProductionSchema, ProductionStage, UserWithPassword
 from .singleton import SingletonMeta
-
-DBModel = tp.Union[Employee, Passport, ProductionStage, User]
 
 
 class MongoDbWrapper(metaclass=SingletonMeta):
@@ -77,6 +75,16 @@ class MongoDbWrapper(metaclass=SingletonMeta):
     async def _remove_document_from_collection(self, collection_: AsyncIOMotorCollection, key: str, value: str) -> None:
         """Remove document from collection by {key:value}"""
         await collection_.find_one_and_delete({key: value})
+
+    async def _update_document_in_collection(
+        self,
+        collection_: AsyncIOMotorCollection,
+        key: str,
+        value: str,
+        new_data: BaseModel,
+        exclude: tp.Optional[tp.Set[str]] = None,
+    ):
+        await collection_.find_one_and_update({key: value}, {"$set": new_data.dict(exclude=exclude)})
 
     async def decode_employee(self, hashed_employee: str) -> tp.Optional[Employee]:
         """Find an employee by hashed data"""
@@ -207,3 +215,13 @@ class MongoDbWrapper(metaclass=SingletonMeta):
     async def remove_schema(self, schema_id: str) -> None:
         """remove production schema from database"""
         await self._remove_document_from_collection(self._schemas_collection, key="schema_id", value=schema_id)
+
+    async def edit_schema(self, schema_id: str, new_schema: ProductionSchema) -> None:
+        """edit single production stage schema by its schema_id"""
+        await self._update_document_in_collection(
+            self._schemas_collection,
+            key="schema_id",
+            value=schema_id,
+            new_data=new_schema,
+            exclude={"schema_id", "parent_schema_id", "required_components_schema_ids"},
+        )
