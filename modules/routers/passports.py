@@ -1,6 +1,6 @@
 import typing as tp
 
-from fastapi import APIRouter, Depends, exceptions
+from fastapi import APIRouter, Depends
 
 from ..database import MongoDbWrapper
 from ..exceptions import DatabaseException

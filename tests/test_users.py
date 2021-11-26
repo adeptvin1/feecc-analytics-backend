@@ -1,5 +1,3 @@
-import random
-
 from . import client, login, TEST_USER, FAKE_USER
 
 
