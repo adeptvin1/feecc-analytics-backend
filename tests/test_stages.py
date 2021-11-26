@@ -1,4 +1,7 @@
 from datetime import datetime
+
+import pytest
+
 from . import client, login
 
 
@@ -14,6 +17,7 @@ def test_get_stages_authorized():
     assert r.status_code == 200, r.json()
 
 
+@pytest.mark.slow
 def test_get_stages_with_decoded_employees_authorized():
     token = login()
     r = client.get("/api/v1/stages/?decode_employees=true", headers={"Authorization": f"Bearer {token}"})
@@ -55,3 +59,10 @@ def test_check_removed_stage():
     token = login()
     r = client.get("/api/v1/stages/123456", headers={"Authorization": f"Bearer {token}"})
     assert r.json().get("stage", None) is None, f"expected None got {r.json()}"
+
+
+def test_check_nonexistent_stage():
+    token = login()
+    r = client.get("/api/v1/stages/nonexistent", headers={"Authorization": f"Bearer {token}"})
+    assert r.json().get("stage", None) is None, f"expected None got {r.json()}"
+    assert r.json().get("status_code", None) == 404, r.json()

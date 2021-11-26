@@ -38,3 +38,8 @@ warn_incomplete_stub = false
 
 [tool.black]
 line-length = 120
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: marks tests as resource intesive (deselect with '-m \"not slow\"')",
+]

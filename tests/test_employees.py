@@ -31,3 +31,16 @@ def test_remove_created_employee():
     token = login()
     r = client.delete("/api/v1/employees/123", headers={"Authorization": f"Bearer {token}"})
     assert r.json()["status_code"] == 200
+
+
+def test_check_removed_employee():
+    token = login()
+    r = client.get("/api/v1/employees/123", headers={"Authorization": f"Bearer {token}"})
+    assert r.json().get("employee", None) is None, r.json()
+
+
+def test_get_nonexistent_employee():
+    token = login()
+    r = client.get("/api/v1/employees/nonexistent", headers={"Authorization": f"Bearer {token}"})
+    assert r.json().get("employee", None) is None, r.json()
+    assert r.json().get("status_code", None) == 404, r.json()

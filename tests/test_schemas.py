@@ -72,3 +72,10 @@ def test_check_deleted_schema():
     r = client.get("/api/v1/schemas/123456", headers={"Authorization": f"Bearer {token}"})
     assert r.json().get("schema", None) is None, r.json()
     assert r.json().get("status_code") == 404, r.json()
+
+
+def test_get_nonexistent_schema():
+    token = login()
+    r = client.get("/api/v1/schemas/nonexistent", headers={"Authorization": f"Bearer {token}"})
+    assert r.json().get("schema", None) is None, r.json()
+    assert r.json().get("status_code", None) == 404, r.json()

@@ -47,3 +47,10 @@ def test_check_deleted_passport():
     token = login()
     r = client.get("/api/v1/passports/123456", headers={"Authorization": f"Bearer {token}"})
     assert r.json().get("passport", None) is None, r.json()
+
+
+def test_get_nonexistent_passport():
+    token = login()
+    r = client.get("/api/v1/passports/nonexistent", headers={"Authorization": f"Bearer {token}"})
+    assert r.json().get("passport", None) is None, r.json()
+    assert r.json().get("status_code", None) == 404, r.json()

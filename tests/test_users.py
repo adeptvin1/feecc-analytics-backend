@@ -39,3 +39,16 @@ def test_delete_user():
 
     r = client.get(f"/api/v1/users/{FAKE_USER.get('username')}", headers={"Authorization": f"Bearer {token}"})
     r.json().get("user", None) is None, r.json()
+
+
+def test_get_deleted_user_data():
+    token = login()
+    r = client.get(f"/api/v1/users/{FAKE_USER.get('username')}", headers={"Authorization": f"Bearer {token}"})
+    assert r.json().get("user", None) is None, r.json()
+
+
+def test_get_nonexistent_user():
+    token = login()
+    r = client.get("/api/v1/users/nonexistent", headers={"Authorization": f"Bearer {token}"})
+    assert r.json().get("user", None) is None, r.json()
+    assert r.json().get("status_code") == 404, r.json()
