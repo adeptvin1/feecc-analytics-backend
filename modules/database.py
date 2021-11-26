@@ -83,8 +83,11 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         value: str,
         new_data: BaseModel,
         exclude: tp.Optional[tp.Set[str]] = None,
-    ):
-        await collection_.find_one_and_update({key: value}, {"$set": new_data.dict(exclude=exclude)})
+    ) -> None:
+        if exclude:
+            await collection_.find_one_and_update({key: value}, {"$set": new_data.dict(exclude=exclude)})
+        else:
+            await collection_.find_one_and_update({key: value}, {"$set": new_data.dict()})
 
     async def decode_employee(self, hashed_employee: str) -> tp.Optional[Employee]:
         """Find an employee by hashed data"""
