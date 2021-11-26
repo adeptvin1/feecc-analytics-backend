@@ -206,7 +206,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
 
     async def remove_stage(self, stage_id: str) -> None:
         """remove production stage from database"""
-        await self._remove_document_from_collection(self._prod_stage_collection, key="stage_id", value=stage_id)
+        await self._remove_document_from_collection(self._prod_stage_collection, key="id", value=stage_id)
 
     async def remove_user(self, username: str) -> None:
         """remove user by username from database"""

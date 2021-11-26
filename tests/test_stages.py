@@ -49,3 +49,9 @@ def test_remove_created_stage():
     token = login()
     r = client.delete("/api/v1/stages/123456", headers={"Authorization": f"Bearer {token}"})
     assert r.json().get("status_code", None) == 200
+
+
+def test_check_removed_stage():
+    token = login()
+    r = client.get("/api/v1/stages/123456", headers={"Authorization": f"Bearer {token}"})
+    assert r.json().get("stage", None) is None, f"expected None got {r.json()}"
