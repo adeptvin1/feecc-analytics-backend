@@ -41,12 +41,14 @@ async def delete_employee(rfid_card_id: str) -> GenericResponse:
 
 
 @router.get("/{rfid_card_id}", response_model=tp.Union[EmployeeOut, GenericResponse])  # type:ignore
-async def get_employee_by_card_id(rfid_card_id: str) -> EmployeeOut:
+async def get_employee_by_card_id(rfid_card_id: str) -> tp.Union[EmployeeOut, GenericResponse]:
     """Endpoint to get information about concrete employee by his rfid card id"""
     try:
         employee = await MongoDbWrapper().get_concrete_employee(rfid_card_id)
     except Exception as exception_message:
         raise DatabaseException(error=exception_message)
+    if employee is None:
+        return GenericResponse(status_code=404, detail="Not found")
     return EmployeeOut(employee=employee)
 
 

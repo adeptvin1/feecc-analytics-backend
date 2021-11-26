@@ -46,10 +46,12 @@ async def delete_passport(internal_id: str) -> GenericResponse:
 
 
 @router.get("/{internal_id}", response_model=tp.Union[PassportOut, GenericResponse])  # type:ignore
-async def get_passport_by_internal_id(internal_id: str) -> PassportOut:
+async def get_passport_by_internal_id(internal_id: str) -> tp.Union[PassportOut, GenericResponse]:
     """Endpoint to get information about concrete issued passport"""
     try:
         passport = await MongoDbWrapper().get_concrete_passport(internal_id)
     except Exception as exception_message:
         raise DatabaseException(error=exception_message)
+    if passport is None:
+        return GenericResponse(status_code=404, detail="Not found")
     return PassportOut(passport=passport)

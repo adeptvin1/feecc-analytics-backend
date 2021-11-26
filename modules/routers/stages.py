@@ -47,10 +47,12 @@ async def remove_stage(stage_id: str) -> GenericResponse:
 
 
 @router.get("/{stage_id}", response_model=tp.Union[ProductionStageOut, GenericResponse])  # type:ignore
-async def get_stage_by_id(stage_id: str) -> ProductionStageOut:
+async def get_stage_by_id(stage_id: str) -> tp.Union[ProductionStageOut, GenericResponse]:
     """Endpoint to get information about concrete production stage"""
     try:
         stage = await MongoDbWrapper().get_concrete_stage(stage_id)
     except Exception as exception_message:
         raise DatabaseException(error=exception_message)
+    if stage is None:
+        return GenericResponse(status_code=404, detail="Not found")
     return ProductionStageOut(stage=stage)

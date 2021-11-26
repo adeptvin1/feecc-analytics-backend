@@ -31,12 +31,14 @@ async def register_new_user(user: UserWithPassword = Depends(create_new_user)) -
     dependencies=[Depends(get_current_user)],
     response_model=tp.Union[UserOut, GenericResponse],  # type:ignore
 )
-async def get_user_data(username: str) -> UserOut:
+async def get_user_data(username: str) -> tp.Union[UserOut, GenericResponse]:
     """Get information about concrete user"""
     try:
         user = await MongoDbWrapper().get_concrete_user(username)
     except Exception as exception_message:
         raise DatabaseException(error=exception_message)
+    if user is None:
+        return GenericResponse(status_code=404, detail="Not found")
     return UserOut(user=user)
 
 
