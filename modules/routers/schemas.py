@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends
 from ..exceptions import DatabaseException
 from ..security import check_user_permissions, get_current_user
 from ..database import MongoDbWrapper
-from ..models import ProductionSchema, ProductionSchemaOut, ProductionSchemasOut, GenericResponse, ProductionStage
+from ..models import ProductionSchema, ProductionSchemaOut, ProductionSchemasOut, GenericResponse
 
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
@@ -15,10 +15,10 @@ router = APIRouter(dependencies=[Depends(get_current_user)])
 @router.get("/", response_model=tp.Union[ProductionSchemasOut, GenericResponse])  # type:ignore
 async def get_all_production_schemas(page: int = 1, items: int = 20) -> ProductionSchemasOut:
     """
-    Endpoint to get all production schemas
+    Endpoint to get all production schemas.
     Pagination:
-        page: number of page (default 1)
-        items: number of items on single page (default 20)
+        page: number of page (default 1);
+        items: number of items on single page (default 20);
     """
     try:
         schemas_count = await MongoDbWrapper().count_schemas()
@@ -29,7 +29,7 @@ async def get_all_production_schemas(page: int = 1, items: int = 20) -> Producti
 
 
 @router.get("/{schema_id}", response_model=tp.Union[ProductionSchemaOut, GenericResponse])  # type:ignore
-async def get_concrete_production_schema(schema_id: str) -> ProductionSchemaOut:
+async def get_concrete_production_schema(schema_id: str) -> tp.Union[ProductionSchemaOut, GenericResponse]:
     """
     Endpoint to get concrete production schema by its schema_id field or null if not exists
     """
@@ -37,13 +37,15 @@ async def get_concrete_production_schema(schema_id: str) -> ProductionSchemaOut:
         schema = await MongoDbWrapper().get_concrete_schema(schema_id)
     except Exception as exception_message:
         raise DatabaseException(error=exception_message)
+    if schema is None:
+        return GenericResponse(status_code=404, detail="Not found")
     return ProductionSchemaOut(schema=schema)
 
 
 @router.post("/", response_model=GenericResponse, dependencies=[Depends(check_user_permissions)])
 async def create_new_production_schema(schema: ProductionSchema) -> GenericResponse:
     """
-    Endpoint to create new production schema
+    Endpoint to create new production schema.
     don't send "schema_id" field, it'll be overridden!
     """
     try:
