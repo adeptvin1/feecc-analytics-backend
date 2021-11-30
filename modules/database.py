@@ -5,7 +5,7 @@ from loguru import logger
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection, AsyncIOMotorCursor
 from pydantic import BaseModel
 
-from .models import Employee, Passport, ProductionSchema, ProductionStage, UserWithPassword
+from .models import Employee, Passport, ProductionSchema, ProductionStage, UserWithPassword, NewUser
 from .singleton import SingletonMeta
 
 
@@ -219,12 +219,18 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         """remove production schema from database"""
         await self._remove_document_from_collection(self._schemas_collection, key="schema_id", value=schema_id)
 
-    async def edit_schema(self, schema_id: str, new_schema: ProductionSchema) -> None:
+    async def edit_schema(self, schema_id: str, new_schema_data: ProductionSchema) -> None:
         """edit single production stage schema by its schema_id"""
         await self._update_document_in_collection(
             self._schemas_collection,
             key="schema_id",
             value=schema_id,
-            new_data=new_schema,
+            new_data=new_schema_data,
             exclude={"schema_id", "parent_schema_id", "required_components_schema_ids"},
+        )
+
+    async def edit_user(self, username: str, new_user_data: UserWithPassword) -> None:
+        """edit concrete user's data"""
+        await self._update_document_in_collection(
+            self._credentials_collection, key="username", value=username, new_data=new_user_data, exclude={"is_admin"}
         )
