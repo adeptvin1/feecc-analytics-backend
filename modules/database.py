@@ -250,3 +250,20 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         await self._update_document_in_collection(
             self._employee_collection, key="rfid_card_id", value=rfid_card_id, new_data=new_employee_data, exclude=None
         )
+
+    async def edit_stage(self, stage_id: str, new_stage_data: ProductionStage) -> None:
+        """edit concrete production stage data"""
+        await self._update_document_in_collection(
+            self._prod_stage_collection,
+            key="id",
+            value=stage_id,
+            new_data=new_stage_data,
+            exclude={
+                "parent_unit_uuid",
+                "session_start_time",
+                "session_end_time",
+                "id",
+                "is_in_db",
+                "creation_time",
+            },
+        )

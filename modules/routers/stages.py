@@ -56,3 +56,21 @@ async def get_stage_by_id(stage_id: str) -> tp.Union[ProductionStageOut, Generic
     if stage is None:
         return GenericResponse(status_code=404, detail="Not found")
     return ProductionStageOut(stage=stage)
+
+
+@router.patch(
+    "/{stage_id}",
+    response_model=GenericResponse,
+    dependencies=[Depends(check_user_permissions)],
+)
+async def patch_stage(stage_id: str, new_data: ProductionStage) -> GenericResponse:
+    """
+    Endpoint to edit production stages. You're unable to edit such fields as:
+    "parent_unit_uuid","session_start_time","session_end_time","id","is_in_db","creation_time".
+    But you may send "string" anyways, backend will remove it before update in db.
+    """
+    try:
+        await MongoDbWrapper().edit_stage(stage_id=stage_id, new_stage_data=new_data)
+    except Exception as exception_message:
+        raise DatabaseException(error=exception_message)
+    return GenericResponse(detail="Successfully patched stage")
