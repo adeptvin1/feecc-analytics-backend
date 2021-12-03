@@ -52,6 +52,7 @@ def test_patch_schema():
         "parent_schema_id": "123456",
     }
     r = client.patch("/api/v1/schemas/123456", headers={"Authorization": f"Bearer {token}"}, json=schema_patch)
+    assert r.json()["status_code"] == 200, r.json()
 
 
 def test_get_patched_schema():

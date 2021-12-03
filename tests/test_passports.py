@@ -55,7 +55,7 @@ def test_patch_passport() -> None:
         "model": "New Model",
     }
     r = client.patch("/api/v1/passports/123456", headers={"Authorization": f"Bearer {token}"}, json=passport_patch)
-    assert r.json().get("status_code", None) == 200, r.json()
+    assert r.json()["status_code"] == 200, r.json()
 
 
 def test_get_patched_passport() -> None:
