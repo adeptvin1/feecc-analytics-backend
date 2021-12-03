@@ -5,10 +5,8 @@ from loguru import logger
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection, AsyncIOMotorCursor
 from pydantic import BaseModel
 
-from .models import Employee, Passport, ProductionSchema, ProductionStage, User, UserWithPassword
+from .models import Employee, Passport, ProductionSchema, ProductionStage, UserWithPassword, NewUser
 from .singleton import SingletonMeta
-
-DBModel = tp.Union[Employee, Passport, ProductionStage, User]
 
 
 class MongoDbWrapper(metaclass=SingletonMeta):
@@ -77,6 +75,19 @@ class MongoDbWrapper(metaclass=SingletonMeta):
     async def _remove_document_from_collection(self, collection_: AsyncIOMotorCollection, key: str, value: str) -> None:
         """Remove document from collection by {key:value}"""
         await collection_.find_one_and_delete({key: value})
+
+    async def _update_document_in_collection(
+        self,
+        collection_: AsyncIOMotorCollection,
+        key: str,
+        value: str,
+        new_data: BaseModel,
+        exclude: tp.Optional[tp.Set[str]] = None,
+    ) -> None:
+        if exclude:
+            await collection_.find_one_and_update({key: value}, {"$set": new_data.dict(exclude=exclude)})
+        else:
+            await collection_.find_one_and_update({key: value}, {"$set": new_data.dict()})
 
     async def decode_employee(self, hashed_employee: str) -> tp.Optional[Employee]:
         """Find an employee by hashed data"""
@@ -198,7 +209,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
 
     async def remove_stage(self, stage_id: str) -> None:
         """remove production stage from database"""
-        await self._remove_document_from_collection(self._prod_stage_collection, key="stage_id", value=stage_id)
+        await self._remove_document_from_collection(self._prod_stage_collection, key="id", value=stage_id)
 
     async def remove_user(self, username: str) -> None:
         """remove user by username from database"""
@@ -207,3 +218,52 @@ class MongoDbWrapper(metaclass=SingletonMeta):
     async def remove_schema(self, schema_id: str) -> None:
         """remove production schema from database"""
         await self._remove_document_from_collection(self._schemas_collection, key="schema_id", value=schema_id)
+
+    async def edit_schema(self, schema_id: str, new_schema_data: ProductionSchema) -> None:
+        """edit single production stage schema by its schema_id"""
+        await self._update_document_in_collection(
+            self._schemas_collection,
+            key="schema_id",
+            value=schema_id,
+            new_data=new_schema_data,
+            exclude={"schema_id", "parent_schema_id", "required_components_schema_ids"},
+        )
+
+    async def edit_user(self, username: str, new_user_data: UserWithPassword) -> None:
+        """edit concrete user's data"""
+        await self._update_document_in_collection(
+            self._credentials_collection, key="username", value=username, new_data=new_user_data, exclude={"is_admin"}
+        )
+
+    async def edit_passport(self, internal_id: str, new_passport_data: Passport) -> None:
+        """edit concrete passport's data"""
+        await self._update_document_in_collection(
+            self._unit_collection,
+            key="internal_id",
+            value=internal_id,
+            new_data=new_passport_data,
+            exclude={"uuid", "internal_id", "is_in_db", "featured_in_int_id"},
+        )
+
+    async def edit_employee(self, rfid_card_id: str, new_employee_data: Employee) -> None:
+        """edit concrete employee's data"""
+        await self._update_document_in_collection(
+            self._employee_collection, key="rfid_card_id", value=rfid_card_id, new_data=new_employee_data, exclude=None
+        )
+
+    async def edit_stage(self, stage_id: str, new_stage_data: ProductionStage) -> None:
+        """edit concrete production stage data"""
+        await self._update_document_in_collection(
+            self._prod_stage_collection,
+            key="id",
+            value=stage_id,
+            new_data=new_stage_data,
+            exclude={
+                "parent_unit_uuid",
+                "session_start_time",
+                "session_end_time",
+                "id",
+                "is_in_db",
+                "creation_time",
+            },
+        )

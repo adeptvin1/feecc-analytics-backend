@@ -1,5 +1,3 @@
-import random
-
 from . import client, login, TEST_USER, FAKE_USER
 
 
@@ -34,10 +32,38 @@ def test_auth_as_a_new_user():
     assert not r.json().get("user").get("is_admin", None), r.json()
 
 
+def test_patch_user():
+    token = login()
+    patch_user = {"username": "fakeusr", "password": "fakefake", "is_admin": False}
+    r = client.patch(
+        f"/api/v1/users/{FAKE_USER.get('username')}", headers={"Authorization": f"Bearer {token}"}, json=patch_user
+    )
+    assert r.status_code == 200
+
+
+def get_patched_user():
+    token = login()
+    r = client.get(f"/api/v1/users/fakeusr", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200
+
+
 def test_delete_user():
     token = login()
-    r = client.delete(f"/api/v1/users/{FAKE_USER.get('username')}", headers={"Authorization": f"Bearer {token}"})
+    r = client.delete(f"/api/v1/users/fakeusr", headers={"Authorization": f"Bearer {token}"})
     assert r.status_code == 200, r.json()
 
-    r = client.get(f"/api/v1/users/{FAKE_USER.get('username')}", headers={"Authorization": f"Bearer {token}"})
+    r = client.get(f"/api/v1/users/fakeusr", headers={"Authorization": f"Bearer {token}"})
     r.json().get("user", None) is None, r.json()
+
+
+def test_get_deleted_user_data():
+    token = login()
+    r = client.get(f"/api/v1/users/fakeusr", headers={"Authorization": f"Bearer {token}"})
+    assert r.json().get("user", None) is None, r.json()
+
+
+def test_get_nonexistent_user():
+    token = login()
+    r = client.get("/api/v1/users/nonexistent", headers={"Authorization": f"Bearer {token}"})
+    assert r.json().get("user", None) is None, r.json()
+    assert r.json().get("status_code") == 404, r.json()

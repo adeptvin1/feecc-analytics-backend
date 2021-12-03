@@ -72,11 +72,11 @@ async def check_user_permissions(user: User = Depends(get_current_user)) -> None
 
 
 async def create_new_user(user: NewUser) -> UserWithPassword:
-    """New user's creation and validation of credentials sfields"""
+    """New user's creation and validation of credentials fields"""
     if len(user.password) < 8:
         raise CredentialsValidationException(details="Password length less than 8 symbols")
     if len(user.username) < 4:
-        raise CredentialsValidationException(details="Username lenght less than 4 symbols")
+        raise CredentialsValidationException(details="Username length less than 4 symbols")
     return UserWithPassword(
         username=user.username, is_admin=user.is_admin, hashed_password=get_password_hash(user.password)
     )

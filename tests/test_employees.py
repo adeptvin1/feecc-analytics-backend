@@ -27,7 +27,36 @@ def test_check_new_employee():
     assert r.json().get("employee", None)["name"] == "test"
 
 
+def test_patch_employee():
+    token = login()
+    employee_patch = {"rfid_card_id": "321", "name": "Test Test Test", "position": "Test"}
+    r = client.patch("/api/v1/employees/123", headers={"Authorization": f"Bearer {token}"}, json=employee_patch)
+    assert r.json()["status_code"] == 200
+
+
+def test_check_patched_employee():
+    token = login()
+    r = client.get("/api/v1/employees/321", headers={"Authorization": f"Bearer {token}"})
+    assert r.json()["status_code"] == 200, r.json()
+    assert r.json().get("employee", None) is not None, r.json()
+    assert r.json().get("employee").get("name") == "Test Test Test", r.json()
+    assert r.json().get("employee").get("position") == "Test", r.json()
+
+
 def test_remove_created_employee():
     token = login()
-    r = client.delete("/api/v1/employees/123", headers={"Authorization": f"Bearer {token}"})
+    r = client.delete("/api/v1/employees/321", headers={"Authorization": f"Bearer {token}"})
     assert r.json()["status_code"] == 200
+
+
+def test_check_removed_employee():
+    token = login()
+    r = client.get("/api/v1/employees/321", headers={"Authorization": f"Bearer {token}"})
+    assert r.json().get("employee", None) is None, r.json()
+
+
+def test_get_nonexistent_employee():
+    token = login()
+    r = client.get("/api/v1/employees/nonexistent", headers={"Authorization": f"Bearer {token}"})
+    assert r.json().get("employee", None) is None, r.json()
+    assert r.json().get("status_code", None) == 404, r.json()
