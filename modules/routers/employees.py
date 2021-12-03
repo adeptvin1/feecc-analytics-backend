@@ -54,6 +54,7 @@ async def get_employee_by_card_id(rfid_card_id: str) -> tp.Union[EmployeeOut, Ge
 
 @router.patch("/{rfid_card_id}", response_model=GenericResponse)
 async def patch_employee(rfid_card_id: str, new_data: Employee) -> GenericResponse:
+    """Endpoint to edit employees."""
     try:
         await MongoDbWrapper().edit_employee(rfid_card_id=rfid_card_id, new_employee_data=new_data)
     except Exception as exception_message:

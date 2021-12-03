@@ -67,4 +67,4 @@ async def patch_passport(internal_id: str, new_data: Passport) -> GenericRespons
         await MongoDbWrapper().edit_passport(internal_id=internal_id, new_passport_data=new_data)
     except Exception as exception_message:
         raise DatabaseException(error=exception_message)
-    return GenericResponse(detail="Patched passport")
+    return GenericResponse(detail="Successfully patched passport")
