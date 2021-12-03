@@ -244,3 +244,9 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             new_data=new_passport_data,
             exclude={"uuid", "internal_id", "is_in_db", "featured_in_int_id"},
         )
+
+    async def edit_employee(self, rfid_card_id: str, new_employee_data: Employee) -> None:
+        """edit concrete employee's data"""
+        await self._update_document_in_collection(
+            self._employee_collection, key="rfid_card_id", value=rfid_card_id, new_data=new_employee_data, exclude=None
+        )

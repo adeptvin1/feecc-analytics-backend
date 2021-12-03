@@ -52,6 +52,15 @@ async def get_employee_by_card_id(rfid_card_id: str) -> tp.Union[EmployeeOut, Ge
     return EmployeeOut(employee=employee)
 
 
+@router.patch("/{rfid_card_id}", response_model=GenericResponse)
+async def patch_employee(rfid_card_id: str, new_data: Employee) -> GenericResponse:
+    try:
+        await MongoDbWrapper().edit_employee(rfid_card_id=rfid_card_id, new_employee_data=new_data)
+    except Exception as exception_message:
+        raise DatabaseException(error=exception_message)
+    return GenericResponse(detail="Successfully patched employee")
+
+
 @router.post("/decode", response_model=tp.Union[EmployeeOut, GenericResponse])  # type:ignore
 async def decode_existing_employee(encoded_employee: EncodedEmployee) -> EmployeeOut:
     """Decode an employee by encoded name"""
