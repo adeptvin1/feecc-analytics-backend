@@ -55,3 +55,16 @@ async def get_passport_by_internal_id(internal_id: str) -> tp.Union[PassportOut,
     if passport is None:
         return GenericResponse(status_code=404, detail="Not found")
     return PassportOut(passport=passport)
+
+
+@router.patch("/{internal_id}", response_model=GenericResponse)
+async def patch_passport(internal_id: str, new_data: Passport) -> GenericResponse:
+    """
+    Edit concrete user's credentials by username.
+    Ignored fields: {"uuid", "internal_id", "is_in_db", "featured_in_int_id"}. Send anything, nothing will be changed
+    """
+    try:
+        await MongoDbWrapper().edit_passport(internal_id=internal_id, new_passport_data=new_data)
+    except Exception as exception_message:
+        raise DatabaseException(error=exception_message)
+    return GenericResponse(detail="Patched passport")

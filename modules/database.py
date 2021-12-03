@@ -234,3 +234,13 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         await self._update_document_in_collection(
             self._credentials_collection, key="username", value=username, new_data=new_user_data, exclude={"is_admin"}
         )
+
+    async def edit_passport(self, internal_id: str, new_passport_data: Passport) -> None:
+        """edit concrete passport's data"""
+        await self._update_document_in_collection(
+            self._unit_collection,
+            key="internal_id",
+            value=internal_id,
+            new_data=new_passport_data,
+            exclude={"uuid", "internal_id", "is_in_db", "featured_in_int_id"},
+        )
