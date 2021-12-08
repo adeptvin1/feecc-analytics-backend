@@ -1,4 +1,5 @@
-import typing as tp
+from datetime import datetime
+
 from . import client, login
 
 
@@ -38,6 +39,42 @@ def test_check_new_passport() -> None:
     assert r.json().get("passport", None)["model"] == "testing"
 
 
+new_stage = {
+    "name": "testing",
+    "employee_name": None,
+    "parent_unit_uuid": "12345678",
+    "session_start_time": str(datetime.now()),
+    "session_end_time": str(datetime.now()),
+    "video_hashes": None,
+    "additional_info": {},
+    "id": "12345678",
+    "is_in_db": False,
+    "creation_time": str(datetime.now()),
+}
+
+
+def test_add_stage_to_nonexistent_passport() -> None:
+    token = login()
+    r = client.post(
+        "/api/v1/passports/nonexistent/add_stage", headers={"Authorization": f"Bearer {token}"}, json=new_stage
+    )
+    assert r.status_code != 200, f"Patched nonexistent passport. Wtf?. Resp: {r.json()}"
+
+
+def test_add_stage_to_passport() -> None:
+    token = login()
+    r = client.post("/api/v1/passports/123456/add_stage", headers={"Authorization": f"Bearer {token}"}, json=new_stage)
+    assert r.json()["status_code"] == 200, r.json()
+
+
+def test_check_added_stage() -> None:
+    token = login()
+    r = client.get("/api/v1/passports/123456", headers={"Authorization": f"Bearer {token}"})
+    assert r.json()["status_code"] == 200, r.json()
+    assert r.json()["passport"].get("biography", None) is not None, r.json()
+    assert r.json()["passport"].get("biography")[0].get("name", None) is not None, r.json()
+
+
 def test_patch_passport() -> None:
     """
     Ignored fields: {"uuid", "internal_id", "is_in_db", "featured_in_int_id"}. Send anything, nothing will be changed
@@ -70,6 +107,7 @@ def test_get_patched_passport() -> None:
     assert (
         r.json().get("passport").get("passport_short_url") == "new_url"
     ), f"Patched immutable field passport_short_url. Resp: {r.json()}"
+    assert r.json().get("passport").get("biography") is None, f"Failed to patch biography. Resp: {r.json()}"
 
 
 def test_remove_created_passport() -> None:

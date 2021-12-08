@@ -191,6 +191,16 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         """add stage to database"""
         await self._add_document_to_collection(self._prod_stage_collection, stage)
 
+    async def add_stage_to_passport(self, passport_id: str, stage: ProductionStage) -> None:
+        """add production stage to concrete passport"""
+        passport = await self.get_concrete_passport(internal_id=passport_id)
+        if passport is None:
+            raise KeyError(f"Passport with id {passport_id} not found")
+        if passport.biography is None:
+            passport.biography = []
+        passport.biography.append(stage)
+        await self.edit_passport(internal_id=passport_id, new_passport_data=passport)
+
     async def add_user(self, user: UserWithPassword) -> None:
         """add user to database"""
         await self._add_document_to_collection(self._credentials_collection, user)

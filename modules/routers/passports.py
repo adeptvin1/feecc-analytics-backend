@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 
 from ..database import MongoDbWrapper
 from ..exceptions import DatabaseException
-from ..models import GenericResponse, Passport, PassportOut, PassportsOut
+from ..models import GenericResponse, Passport, PassportOut, PassportsOut, ProductionStage
 from ..security import check_user_permissions, get_current_user
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
@@ -57,7 +57,7 @@ async def get_passport_by_internal_id(internal_id: str) -> tp.Union[PassportOut,
     return PassportOut(passport=passport)
 
 
-@router.patch("/{internal_id}", response_model=GenericResponse)
+@router.patch("/{internal_id}", dependencies=[Depends(check_user_permissions)], response_model=GenericResponse)
 async def patch_passport(internal_id: str, new_data: Passport) -> GenericResponse:
     """
     Edit concrete user's credentials by username.
@@ -68,3 +68,12 @@ async def patch_passport(internal_id: str, new_data: Passport) -> GenericRespons
     except Exception as exception_message:
         raise DatabaseException(error=exception_message)
     return GenericResponse(detail="Successfully patched passport")
+
+
+@router.post("/{internal_id}/add_stage", dependencies=[Depends(check_user_permissions)], response_model=GenericResponse)
+async def add_stage_to_passport(internal_id: str, new_stage: ProductionStage) -> GenericResponse:
+    try:
+        await MongoDbWrapper().add_stage_to_passport(passport_id=internal_id, stage=new_stage)
+    except Exception as exception_message:
+        raise DatabaseException(error=exception_message)
+    return GenericResponse(detail="Successfully added stage to passport")
