@@ -3,9 +3,13 @@ import typing as tp
 from fastapi.testclient import TestClient
 from app import api
 import random
+import os
 
-
-TEST_USER = {"username": "...", "password": "..."}
+# TO RUN TESTS SET ENVVARS ANALYTICS_TEST_ADMIN_USERNAME AND ANALYTICS_TEST_ADMIN_PASSWORD
+TEST_USER = {
+    "username": os.environ.get("ANALYTICS_TEST_ADMIN_USERNAME"),
+    "password": os.environ.get("ANALYTICS_TEST_ADMIN_PASSWORD"),
+}
 FAKE_USER = {"username": "".join(chr(_) for _ in [random.randint(65, 90) for _ in range(10)]), "password": "123456789"}
 
 
