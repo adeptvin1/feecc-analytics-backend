@@ -5,7 +5,7 @@ from loguru import logger
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection, AsyncIOMotorCursor
 from pydantic import BaseModel
 
-from .models import Employee, Passport, ProductionSchema, ProductionStage, UserWithPassword, NewUser
+from .models import Employee, Passport, ProductionSchema, ProductionStage, UserWithPassword
 from .singleton import SingletonMeta
 
 
@@ -47,8 +47,9 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             result.append(doc)
         return result
 
+    @staticmethod
     async def _get_all_from_collection(
-        self, collection_: AsyncIOMotorCollection, model_: tp.Type[BaseModel]
+        collection_: AsyncIOMotorCollection, model_: tp.Type[BaseModel]
     ) -> tp.List[BaseModel]:
         """retrieves all documents from the specified collection"""
         return tp.cast(
@@ -56,28 +57,30 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             [model_(**_) for _ in await collection_.find({}, {"_id": 0}).to_list(length=None)],
         )
 
-    async def _get_element_by_key(
-        self, collection_: AsyncIOMotorCollection, key: str, value: str
-    ) -> tp.Dict[str, tp.Any]:
+    @staticmethod
+    async def _get_element_by_key(collection_: AsyncIOMotorCollection, key: str, value: str) -> tp.Dict[str, tp.Any]:
         """retrieves all documents from given collection by given {key: value}"""
         result: tp.Dict[str, tp.Any] = await collection_.find_one({key: value}, {"_id": 0})
         return result
 
-    async def _count_documents_in_collection(self, collection_: AsyncIOMotorCollection) -> int:
+    @staticmethod
+    async def _count_documents_in_collection(collection_: AsyncIOMotorCollection) -> int:
         """Count documents in given collection"""
         count: int = await collection_.count_documents({})
         return count
 
-    async def _add_document_to_collection(self, collection_: AsyncIOMotorCollection, item_: BaseModel) -> None:
+    @staticmethod
+    async def _add_document_to_collection(collection_: AsyncIOMotorCollection, item_: BaseModel) -> None:
         """Push document to given MongoDB collection"""
         await collection_.insert_one(item_.dict())
 
-    async def _remove_document_from_collection(self, collection_: AsyncIOMotorCollection, key: str, value: str) -> None:
+    @staticmethod
+    async def _remove_document_from_collection(collection_: AsyncIOMotorCollection, key: str, value: str) -> None:
         """Remove document from collection by {key:value}"""
         await collection_.find_one_and_delete({key: value})
 
+    @staticmethod
     async def _update_document_in_collection(
-        self,
         collection_: AsyncIOMotorCollection,
         key: str,
         value: str,
