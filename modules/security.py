@@ -67,7 +67,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
 
 
 async def check_user_permissions(user: User = Depends(get_current_user)) -> None:
-    if not user.is_admin:
+    if "write" not in user.rule_set:
         raise ForbiddenActionException
 
 
@@ -78,5 +78,5 @@ async def create_new_user(user: NewUser) -> UserWithPassword:
     if len(user.username) < 4:
         raise CredentialsValidationException(details="Username length less than 4 symbols")
     return UserWithPassword(
-        username=user.username, is_admin=user.is_admin, hashed_password=get_password_hash(user.password)
+        username=user.username, rule_set=user.rule_set, hashed_password=get_password_hash(user.password)
     )

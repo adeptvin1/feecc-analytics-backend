@@ -15,7 +15,7 @@ class GenericResponse(BaseModel):
 
 class User(BaseModel):
     username: str
-    is_admin: bool = False
+    rule_set: tp.List[str] = ["read"]
 
 
 class UserOut(GenericResponse):
