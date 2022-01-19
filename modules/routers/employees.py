@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from ..database import MongoDbWrapper
 from ..exceptions import DatabaseException
 from ..models import Employee, EmployeeOut, EmployeesOut, EncodedEmployee, GenericResponse
-from ..security import check_user_permissions, get_current_user
+from ..dependencies.security import check_user_permissions, get_current_user
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
 

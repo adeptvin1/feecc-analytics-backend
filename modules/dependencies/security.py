@@ -8,9 +8,9 @@ from jose import JWTError, jwt
 from loguru import logger
 from passlib.context import CryptContext
 
-from .database import MongoDbWrapper
-from .exceptions import CredentialsValidationException, ForbiddenActionException
-from .models import NewUser, TokenData, User, UserWithPassword
+from modules.database import MongoDbWrapper
+from modules.exceptions import CredentialsValidationException, ForbiddenActionException
+from modules.models import NewUser, TokenData, User, UserWithPassword
 
 SECRET_KEY = os.environ.get("SECRET_KEY")
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
