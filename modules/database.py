@@ -15,16 +15,17 @@ class MongoDbWrapper(metaclass=SingletonMeta):
     def __init__(self) -> None:
         """connect to database using credentials"""
         logger.info("Connecting to MongoDB")
-        mongo_client_url: str = str(os.getenv("MONGO_CONNECTION_URL")) + "&ssl=true&tlsAllowInvalidCertificates=true"
-
-        print(mongo_client_url)
+        mongo_client_url: tp.Optional[str] = os.getenv("MONGO_CONNECTION_URL")
 
         if mongo_client_url is None:
             message = "Cannot establish database connection: $MONGO_CONNECTION_URL environment variable is not set."
             logger.critical(message)
             raise IOError(message)
 
+        mongo_client_url = str(mongo_client_url) + "&ssl=true&tlsAllowInvalidCertificates=true"
         mongo_client: AsyncIOMotorClient = AsyncIOMotorClient(mongo_client_url)
+
+        logger.debug(f"Connected to MongoDB at {mongo_client_url}")
 
         self._database = mongo_client["Feecc-Hub"]
 
@@ -113,7 +114,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         return Employee(**employee)
 
     async def get_concrete_passport(self, internal_id: str) -> tp.Optional[Passport]:
-        """retrieves passport by its internal id"""
+        """retrieves unit by its internal id"""
         passport = await self._get_element_by_key(self._unit_collection, key="internal_id", value=internal_id)
         if not passport:
             return None
@@ -149,7 +150,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         )
 
     async def get_all_passports(self) -> tp.List[Passport]:
-        """retrieves all passports"""
+        """retrieves all units"""
         return tp.cast(tp.List[Passport], await self._get_all_from_collection(self._unit_collection, model_=Passport))
 
     async def get_all_stages(self) -> tp.List[ProductionStage]:
@@ -171,11 +172,11 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         return await self._count_documents_in_collection(self._employee_collection)
 
     async def count_passports(self) -> int:
-        """count documents in employee collection"""
+        """count documents in unit collection"""
         return await self._count_documents_in_collection(self._unit_collection)
 
     async def count_stages(self) -> int:
-        """count documents in employee collection"""
+        """count documents in stages collection"""
         return await self._count_documents_in_collection(self._unit_collection)
 
     async def count_schemas(self) -> int:
@@ -187,7 +188,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         await self._add_document_to_collection(self._employee_collection, employee)
 
     async def add_passport(self, passport: Passport) -> None:
-        """add passport to database"""
+        """add unit to database"""
         await self._add_document_to_collection(self._unit_collection, passport)
 
     async def add_stage(self, stage: ProductionStage) -> None:
@@ -195,10 +196,10 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         await self._add_document_to_collection(self._prod_stage_collection, stage)
 
     async def add_stage_to_passport(self, passport_id: str, stage: ProductionStage) -> None:
-        """add production stage to concrete passport"""
+        """add production stage to concrete unit"""
         passport = await self.get_concrete_passport(internal_id=passport_id)
         if passport is None:
-            raise KeyError(f"Passport with id {passport_id} not found")
+            raise KeyError(f"Unit with id {passport_id} not found")
         if passport.biography is None:
             passport.biography = []
         passport.biography.append(stage)
@@ -217,7 +218,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         await self._remove_document_from_collection(self._employee_collection, key="rfid_card_id", value=rfid_card_id)
 
     async def remove_passport(self, internal_id: str) -> None:
-        """remove passport (unit) from database"""
+        """remove unit from database"""
         await self._remove_document_from_collection(self._unit_collection, key="internal_id", value=internal_id)
 
     async def remove_stage(self, stage_id: str) -> None:
@@ -249,7 +250,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         )
 
     async def edit_passport(self, internal_id: str, new_passport_data: Passport) -> None:
-        """edit concrete passport's data"""
+        """edit concrete unit's data"""
         await self._update_document_in_collection(
             self._unit_collection,
             key="internal_id",
