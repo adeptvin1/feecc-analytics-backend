@@ -3,7 +3,10 @@ import typing as tp
 
 
 async def parse_passports_filter(
-    name: tp.Optional[str], date: tp.Optional[datetime.datetime], overtime: tp.Optional[bool], rework: tp.Optional[bool]
+    name: tp.Optional[str] = None,
+    date: tp.Optional[datetime.datetime] = None,
+    overtime: tp.Optional[bool] = None,
+    rework: tp.Optional[bool] = None,
 ) -> tp.Dict[str, tp.Union[bool, str, datetime.datetime]]:
     clear_filter: tp.Dict[str, tp.Union[bool, str, datetime.datetime]] = {}
 
