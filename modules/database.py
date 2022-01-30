@@ -51,7 +51,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
 
     @staticmethod
     async def _get_all_from_collection(
-        collection_: AsyncIOMotorCollection, model_: tp.Type[BaseModel], filter: Filter
+        collection_: AsyncIOMotorCollection, model_: tp.Type[BaseModel], filter: Filter = {}
     ) -> tp.List[BaseModel]:
         """retrieves all documents from the specified collection"""
         return tp.cast(
@@ -66,7 +66,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         return result
 
     @staticmethod
-    async def _count_documents_in_collection(collection_: AsyncIOMotorCollection, filter: Filter) -> int:
+    async def _count_documents_in_collection(collection_: AsyncIOMotorCollection, filter: Filter = {}) -> int:
         """Count documents in given collection"""
         count: int = await collection_.count_documents(filter)
         return count

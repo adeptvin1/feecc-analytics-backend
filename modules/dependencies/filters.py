@@ -7,8 +7,8 @@ async def parse_passports_filter(
     date: tp.Optional[datetime.datetime] = None,
     overtime: tp.Optional[bool] = None,
     rework: tp.Optional[bool] = None,
-) -> tp.Dict[str, tp.Union[bool, str, datetime.datetime]]:
-    clear_filter: tp.Dict[str, tp.Union[bool, str, datetime.datetime]] = {}
+) -> tp.Dict[str, tp.Union[bool, str, datetime.datetime, tp.Dict[str, str]]]:
+    clear_filter: tp.Dict[str, tp.Union[bool, str, datetime.datetime, tp.Dict[str, str]]] = {}
 
     if name is not None:
         if name.startswith("url"):
