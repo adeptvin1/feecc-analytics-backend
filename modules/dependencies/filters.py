@@ -7,8 +7,10 @@ async def parse_passports_filter(
     date: tp.Optional[datetime.datetime] = None,
     overtime: tp.Optional[bool] = None,
     rework: tp.Optional[bool] = None,
-) -> tp.Dict[str, tp.Union[bool, str, datetime.datetime, tp.Dict[str, str]]]:
-    clear_filter: tp.Dict[str, tp.Union[bool, str, datetime.datetime, tp.Dict[str, str]]] = {}
+) -> tp.Dict[str, tp.Union[bool, str, datetime.datetime, tp.Dict[str, tp.Union[datetime.datetime, str, tp.List[str]]]]]:
+    clear_filter: tp.Dict[
+        str, tp.Union[bool, str, datetime.datetime, tp.Dict[str, tp.Union[datetime.datetime, str, tp.List[str]]]]
+    ] = {}
 
     if name is not None:
         if name.startswith("url"):
@@ -19,7 +21,8 @@ async def parse_passports_filter(
             clear_filter["model"] = {"$regex": name}
 
     if date is not None:
-        clear_filter["date"] = str(date)
+        start, end = date.replace(hour=0, minute=0, second=0), date.replace(hour=23, minute=59, second=59)
+        clear_filter["date"] = {"$lt": end, "$gte": start}
 
     if overtime is not None:
         clear_filter["overtime"] = overtime

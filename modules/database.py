@@ -51,9 +51,18 @@ class MongoDbWrapper(metaclass=SingletonMeta):
 
     @staticmethod
     async def _get_all_from_collection(
-        collection_: AsyncIOMotorCollection, model_: tp.Type[BaseModel], filter: Filter = {}
-    ) -> tp.List[BaseModel]:
+        collection_: AsyncIOMotorCollection,
+        model_: tp.Type[BaseModel],
+        filter: Filter = {},
+        include_only: tp.Optional[str] = None,
+    ) -> tp.List[tp.Any]:
         """retrieves all documents from the specified collection"""
+        logger.debug(f"Filter: {filter}")
+        if include_only:
+            return [
+                _[include_only]
+                for _ in await collection_.find(filter, {"_id": 0, include_only: 1}).to_list(length=None)
+            ]
         return tp.cast(
             tp.List[BaseModel],
             [model_(**_) for _ in await collection_.find(filter, {"_id": 0}).to_list(length=None)],
@@ -152,6 +161,15 @@ class MongoDbWrapper(metaclass=SingletonMeta):
 
     async def get_passports(self, filter: Filter = {}) -> tp.List[Passport]:
         """retrieves all units"""
+        if "date" in filter:
+            matching_uuids = await self._get_all_from_collection(
+                self._prod_stage_collection,
+                model_=ProductionStage,
+                filter={"creation_time": filter["date"]},
+                include_only="parent_unit_uuid",
+            )
+            del filter["date"]
+            filter["uuid"] = {"$in": matching_uuids}  # type: ignore
         return tp.cast(
             tp.List[Passport],
             await self._get_all_from_collection(self._unit_collection, model_=Passport, filter=filter),
