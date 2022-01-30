@@ -11,12 +11,12 @@ async def parse_passports_filter(
     clear_filter: tp.Dict[str, tp.Union[bool, str, datetime.datetime]] = {}
 
     if name is not None:
-        if name.startswith("http"):
-            clear_filter["short_url"] = name
+        if name.startswith("url"):
+            clear_filter["passport_short_url"] = name
         elif len(name) == 13 and name.isnumeric():
             clear_filter["internal_id"] = name
         else:
-            clear_filter["uuid"] = name
+            clear_filter["model"] = name
 
     if date is not None:
         clear_filter["date"] = str(date)

@@ -9,6 +9,8 @@ from ..exceptions import DatabaseException
 from ..models import GenericResponse, Passport, PassportOut, PassportsOut, ProductionStage
 from ..dependencies.security import check_user_permissions, get_current_user
 from ..dependencies.filters import parse_passports_filter
+from ..types import Filter
+
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
 
@@ -17,14 +19,15 @@ router = APIRouter(dependencies=[Depends(get_current_user)])
 async def get_all_passports(
     page: int = 1,
     items: int = 20,
-    filter: tp.Dict[str, tp.Union[bool, str, datetime.datetime]] = Depends(parse_passports_filter),
+    filter: Filter = Depends(parse_passports_filter),
 ) -> PassportsOut:
     """
     Endpoint to get list of all issued units from :start: to :limit:. By default, from 0 to 20.
     """
+    logger.debug(f"Filter: {filter}")
     try:
-        passports = await MongoDbWrapper().get_all_passports()
-        documents_count = await MongoDbWrapper().count_passports()
+        passports = await MongoDbWrapper().get_passports(filter)
+        documents_count = await MongoDbWrapper().count_passports(filter)
     except Exception as exception_message:
         logger.error(
             f"Failed to get units from page {page} (count: {items}, filter: {filter}). Exception: {exception_message}"

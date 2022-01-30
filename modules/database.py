@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 from .models import Employee, Passport, ProductionSchema, ProductionStage, UserWithPassword
 from .singleton import SingletonMeta
+from .types import Filter
 
 
 class MongoDbWrapper(metaclass=SingletonMeta):
@@ -50,12 +51,12 @@ class MongoDbWrapper(metaclass=SingletonMeta):
 
     @staticmethod
     async def _get_all_from_collection(
-        collection_: AsyncIOMotorCollection, model_: tp.Type[BaseModel]
+        collection_: AsyncIOMotorCollection, model_: tp.Type[BaseModel], filter: Filter
     ) -> tp.List[BaseModel]:
         """retrieves all documents from the specified collection"""
         return tp.cast(
             tp.List[BaseModel],
-            [model_(**_) for _ in await collection_.find({}, {"_id": 0}).to_list(length=None)],
+            [model_(**_) for _ in await collection_.find(filter, {"_id": 0}).to_list(length=None)],
         )
 
     @staticmethod
@@ -65,9 +66,9 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         return result
 
     @staticmethod
-    async def _count_documents_in_collection(collection_: AsyncIOMotorCollection) -> int:
+    async def _count_documents_in_collection(collection_: AsyncIOMotorCollection, filter: Filter) -> int:
         """Count documents in given collection"""
-        count: int = await collection_.count_documents({})
+        count: int = await collection_.count_documents(filter)
         return count
 
     @staticmethod
@@ -149,9 +150,12 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             tp.List[Employee], await self._get_all_from_collection(self._employee_collection, model_=Employee)
         )
 
-    async def get_all_passports(self) -> tp.List[Passport]:
+    async def get_passports(self, filter: Filter = {}) -> tp.List[Passport]:
         """retrieves all units"""
-        return tp.cast(tp.List[Passport], await self._get_all_from_collection(self._unit_collection, model_=Passport))
+        return tp.cast(
+            tp.List[Passport],
+            await self._get_all_from_collection(self._unit_collection, model_=Passport, filter=filter),
+        )
 
     async def get_all_stages(self) -> tp.List[ProductionStage]:
         """retrieves all production stages"""
@@ -171,9 +175,9 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         """count documents in employee collection"""
         return await self._count_documents_in_collection(self._employee_collection)
 
-    async def count_passports(self) -> int:
+    async def count_passports(self, filter: Filter = {}) -> int:
         """count documents in unit collection"""
-        return await self._count_documents_in_collection(self._unit_collection)
+        return await self._count_documents_in_collection(self._unit_collection, filter=filter)
 
     async def count_stages(self) -> int:
         """count documents in stages collection"""
