@@ -110,6 +110,12 @@ def test_get_patched_passport() -> None:
     assert r.json().get("passport").get("biography") is None, f"Failed to patch biography. Resp: {r.json()}"
 
 
+def test_get_filtered_passport() -> None:
+    token = login()
+    r = client.get("/api/v1/passports/?name=123456", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200, r.json()
+
+
 def test_remove_created_passport() -> None:
     token = login()
     r = client.delete("/api/v1/passports/123456", headers={"Authorization": f"Bearer {token}"})
