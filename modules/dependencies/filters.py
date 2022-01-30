@@ -16,7 +16,7 @@ async def parse_passports_filter(
         elif len(name) == 13 and name.isnumeric():
             clear_filter["internal_id"] = name
         else:
-            clear_filter["model"] = name
+            clear_filter["model"] = {"$regex": name}
 
     if date is not None:
         clear_filter["date"] = str(date)

@@ -2,7 +2,6 @@ import typing as tp
 
 from fastapi import APIRouter, Depends
 from loguru import logger
-import datetime
 
 from ..database import MongoDbWrapper
 from ..exceptions import DatabaseException
