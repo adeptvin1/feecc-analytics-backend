@@ -67,6 +67,8 @@ async def get_passport_by_internal_id(internal_id: str) -> tp.Union[PassportOut,
     """Endpoint to get information about concrete issued unit"""
     try:
         passport = await MongoDbWrapper().get_concrete_passport(internal_id)
+        passport.biography = await MongoDbWrapper().get_stages(uuid=passport.uuid)
+        passport.date = await MongoDbWrapper().get_passport_creation_date(uuid=passport.uuid)
     except Exception as exception_message:
         logger.error(f"Failed to get unit {internal_id}. Exception: {exception_message}")
         raise DatabaseException(error=exception_message)
