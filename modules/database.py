@@ -1,3 +1,4 @@
+import datetime
 import os
 import typing as tp
 
@@ -153,6 +154,14 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             return None
         return ProductionSchema(**schema)
 
+    async def get_passport_creation_date(self, uuid: str) -> tp.Optional[datetime.datetime]:
+        try:
+            return (
+                await self._get_element_by_key(self._prod_stage_collection, key="parent_unit_uuid", value=uuid)
+            ).get("creation_time", None)
+        except Exception:
+            return None
+
     async def get_all_employees(self) -> tp.List[Employee]:
         """retrieves all employees"""
         return tp.cast(
@@ -175,11 +184,13 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             await self._get_all_from_collection(self._unit_collection, model_=Passport, filter=filter),
         )
 
-    async def get_all_stages(self) -> tp.List[ProductionStage]:
+    async def get_stages(self, uuid: str) -> tp.List[ProductionStage]:
         """retrieves all production stages"""
         return tp.cast(
             tp.List[ProductionStage],
-            await self._get_all_from_collection(self._prod_stage_collection, model_=ProductionStage),
+            await self._get_all_from_collection(
+                self._prod_stage_collection, model_=ProductionStage, filter={"parent_unit_uuid": uuid}
+            ),
         )
 
     async def get_all_schemas(self) -> tp.List[ProductionSchema]:

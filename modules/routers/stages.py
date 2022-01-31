@@ -7,7 +7,7 @@ from ..exceptions import DatabaseException
 from ..models import GenericResponse, ProductionStage, ProductionStageOut, ProductionStagesOut
 from ..dependencies.security import check_user_permissions, get_current_user
 
-router = APIRouter(dependencies=[Depends(get_current_user)])
+router = APIRouter(dependencies=[Depends(get_current_user)], deprecated=True)
 
 
 @router.get("/", response_model=tp.Union[ProductionStagesOut, GenericResponse])  # type:ignore
@@ -15,7 +15,7 @@ async def get_production_stages(page: int = 1, items: int = 20, decode_employees
     """
     Endpoint to get list of all production stages from :start: to :limit:. By default, from 0 to 20.
     """
-    stages = await MongoDbWrapper().get_all_stages()
+    stages = await MongoDbWrapper().get_stages()
     documents_count = await MongoDbWrapper().count_stages()
     try:
         if decode_employees:

@@ -111,6 +111,7 @@ class Passport(BaseModel):
     featured_in_int_id: tp.Optional[str]
     barcode: tp.Optional[Barcode]
     model: tp.Optional[str] = None
+    date: tp.Optional[datetime] = None
 
 
 class PassportsOut(GenericResponse):

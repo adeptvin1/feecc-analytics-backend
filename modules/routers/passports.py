@@ -25,15 +25,19 @@ async def get_all_passports(
     """
     logger.debug(f"Filter: {filter}")
     try:
-        passports = await MongoDbWrapper().get_passports(filter)
+        passports = (await MongoDbWrapper().get_passports(filter))[(page - 1) * items : page * items]
         documents_count = await MongoDbWrapper().count_passports(filter)
+
+        for passport in passports:
+            passport.biography = await MongoDbWrapper().get_stages(uuid=passport.uuid)
+            passport.date = await MongoDbWrapper().get_passport_creation_date(uuid=passport.uuid)
     except Exception as exception_message:
         logger.error(
             f"Failed to get units from page {page} (count: {items}, filter: {filter}). Exception: {exception_message}"
         )
         raise DatabaseException(error=exception_message)
 
-    return PassportsOut(count=documents_count, data=passports[(page - 1) * items : page * items])
+    return PassportsOut(count=documents_count, data=passports)
 
 
 @router.post("/", dependencies=[Depends(check_user_permissions)], response_model=GenericResponse)
