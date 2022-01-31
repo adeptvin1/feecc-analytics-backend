@@ -15,7 +15,7 @@ async def get_production_stages(page: int = 1, items: int = 20, decode_employees
     """
     Endpoint to get list of all production stages from :start: to :limit:. By default, from 0 to 20.
     """
-    stages = await MongoDbWrapper().get_stages()
+    stages = await MongoDbWrapper().get_stages(uuid="Deprecated")
     documents_count = await MongoDbWrapper().count_stages()
     try:
         if decode_employees:

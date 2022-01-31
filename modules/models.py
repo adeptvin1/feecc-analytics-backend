@@ -105,13 +105,14 @@ class Passport(BaseModel):
     internal_id: str
     passport_short_url: tp.Optional[str]
     is_in_db: bool
-    _schema: tp.Annotated[tp.Optional[ProductionSchema], Field(alias="schema")]
+    schema_id: tp.Optional[str] = None
     biography: tp.Optional[tp.List[ProductionStage]]
     components_units: tp.Optional[tp.Dict[str, tp.Any]] = None
     featured_in_int_id: tp.Optional[str]
     barcode: tp.Optional[Barcode]
     model: tp.Optional[str] = None
     date: tp.Optional[datetime] = None
+    type: tp.Optional[str] = None
 
 
 class PassportsOut(GenericResponse):

@@ -29,8 +29,14 @@ async def get_all_passports(
         documents_count = await MongoDbWrapper().count_passports(filter)
 
         for passport in passports:
+            if not passport:
+                continue
             passport.biography = await MongoDbWrapper().get_stages(uuid=passport.uuid)
             passport.date = await MongoDbWrapper().get_passport_creation_date(uuid=passport.uuid)
+            if passport.schema_id:
+                schema = await MongoDbWrapper().get_concrete_schema(schema_id=passport.schema_id)
+                if schema:
+                    passport.model = schema.unit_name or passport.model
     except Exception as exception_message:
         logger.error(
             f"Failed to get units from page {page} (count: {items}, filter: {filter}). Exception: {exception_message}"
@@ -67,14 +73,18 @@ async def get_passport_by_internal_id(internal_id: str) -> tp.Union[PassportOut,
     """Endpoint to get information about concrete issued unit"""
     try:
         passport = await MongoDbWrapper().get_concrete_passport(internal_id)
+        if passport is None:
+            logger.error(f"Unknown unit {internal_id}")
+            return GenericResponse(status_code=404, detail="Not found")
+        if passport.schema_id:
+            schema = await MongoDbWrapper().get_concrete_schema(schema_id=passport.schema_id)
+            if schema:
+                passport.model = schema.unit_name or passport.model
         passport.biography = await MongoDbWrapper().get_stages(uuid=passport.uuid)
         passport.date = await MongoDbWrapper().get_passport_creation_date(uuid=passport.uuid)
     except Exception as exception_message:
         logger.error(f"Failed to get unit {internal_id}. Exception: {exception_message}")
         raise DatabaseException(error=exception_message)
-    if passport is None:
-        logger.error(f"Unknown unit {internal_id}")
-        return GenericResponse(status_code=404, detail="Not found")
     return PassportOut(passport=passport)
 
 
