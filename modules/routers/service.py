@@ -7,7 +7,7 @@ from loguru import logger
 
 from ..exceptions import AuthException
 from ..models import Token
-from ..security import ACCESS_TOKEN_EXPIRE_MINUTES, authenticate_user, create_access_token
+from ..dependencies.security import ACCESS_TOKEN_EXPIRE_MINUTES, authenticate_user, create_access_token
 
 router = APIRouter()
 

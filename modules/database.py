@@ -1,3 +1,4 @@
+import datetime
 import os
 import typing as tp
 
@@ -5,8 +6,9 @@ from loguru import logger
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection, AsyncIOMotorCursor
 from pydantic import BaseModel
 
-from .models import Employee, Passport, ProductionSchema, ProductionStage, UserWithPassword, NewUser
+from .models import Employee, Passport, ProductionSchema, ProductionStage, UserWithPassword
 from .singleton import SingletonMeta
+from .types import Filter
 
 
 class MongoDbWrapper(metaclass=SingletonMeta):
@@ -15,16 +17,17 @@ class MongoDbWrapper(metaclass=SingletonMeta):
     def __init__(self) -> None:
         """connect to database using credentials"""
         logger.info("Connecting to MongoDB")
-        mongo_client_url: str = str(os.getenv("MONGO_CONNECTION_URL")) + "&ssl=true&tlsAllowInvalidCertificates=true"
-
-        print(mongo_client_url)
+        mongo_client_url: tp.Optional[str] = os.getenv("MONGO_CONNECTION_URL")
 
         if mongo_client_url is None:
             message = "Cannot establish database connection: $MONGO_CONNECTION_URL environment variable is not set."
             logger.critical(message)
             raise IOError(message)
 
+        mongo_client_url = str(mongo_client_url) + "&ssl=true&tlsAllowInvalidCertificates=true"
         mongo_client: AsyncIOMotorClient = AsyncIOMotorClient(mongo_client_url)
+
+        logger.debug(f"Connected to MongoDB at {mongo_client_url}")
 
         self._database = mongo_client["Feecc-Hub"]
 
@@ -47,37 +50,49 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             result.append(doc)
         return result
 
+    @staticmethod
     async def _get_all_from_collection(
-        self, collection_: AsyncIOMotorCollection, model_: tp.Type[BaseModel]
-    ) -> tp.List[BaseModel]:
+        collection_: AsyncIOMotorCollection,
+        model_: tp.Type[BaseModel],
+        filter: Filter = {},
+        include_only: tp.Optional[str] = None,
+    ) -> tp.List[tp.Any]:
         """retrieves all documents from the specified collection"""
+        logger.debug(f"Filter: {filter}")
+        if include_only:
+            return [
+                _[include_only]
+                for _ in await collection_.find(filter, {"_id": 0, include_only: 1}).to_list(length=None)
+            ]
         return tp.cast(
             tp.List[BaseModel],
-            [model_(**_) for _ in await collection_.find({}, {"_id": 0}).to_list(length=None)],
+            [model_(**_) for _ in await collection_.find(filter, {"_id": 0}).to_list(length=None)],
         )
 
-    async def _get_element_by_key(
-        self, collection_: AsyncIOMotorCollection, key: str, value: str
-    ) -> tp.Dict[str, tp.Any]:
+    @staticmethod
+    async def _get_element_by_key(collection_: AsyncIOMotorCollection, key: str, value: str) -> tp.Dict[str, tp.Any]:
         """retrieves all documents from given collection by given {key: value}"""
         result: tp.Dict[str, tp.Any] = await collection_.find_one({key: value}, {"_id": 0})
         return result
 
-    async def _count_documents_in_collection(self, collection_: AsyncIOMotorCollection) -> int:
+    @staticmethod
+    async def _count_documents_in_collection(collection_: AsyncIOMotorCollection, filter: Filter = {}) -> int:
         """Count documents in given collection"""
-        count: int = await collection_.count_documents({})
+        count: int = await collection_.count_documents(filter)
         return count
 
-    async def _add_document_to_collection(self, collection_: AsyncIOMotorCollection, item_: BaseModel) -> None:
+    @staticmethod
+    async def _add_document_to_collection(collection_: AsyncIOMotorCollection, item_: BaseModel) -> None:
         """Push document to given MongoDB collection"""
         await collection_.insert_one(item_.dict())
 
-    async def _remove_document_from_collection(self, collection_: AsyncIOMotorCollection, key: str, value: str) -> None:
+    @staticmethod
+    async def _remove_document_from_collection(collection_: AsyncIOMotorCollection, key: str, value: str) -> None:
         """Remove document from collection by {key:value}"""
         await collection_.find_one_and_delete({key: value})
 
+    @staticmethod
     async def _update_document_in_collection(
-        self,
         collection_: AsyncIOMotorCollection,
         key: str,
         value: str,
@@ -110,7 +125,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         return Employee(**employee)
 
     async def get_concrete_passport(self, internal_id: str) -> tp.Optional[Passport]:
-        """retrieves passport by its internal id"""
+        """retrieves unit by its internal id"""
         passport = await self._get_element_by_key(self._unit_collection, key="internal_id", value=internal_id)
         if not passport:
             return None
@@ -139,21 +154,43 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             return None
         return ProductionSchema(**schema)
 
+    async def get_passport_creation_date(self, uuid: str) -> tp.Optional[datetime.datetime]:
+        try:
+            return (
+                await self._get_element_by_key(self._prod_stage_collection, key="parent_unit_uuid", value=uuid)
+            ).get("creation_time", None)
+        except Exception:
+            return None
+
     async def get_all_employees(self) -> tp.List[Employee]:
         """retrieves all employees"""
         return tp.cast(
             tp.List[Employee], await self._get_all_from_collection(self._employee_collection, model_=Employee)
         )
 
-    async def get_all_passports(self) -> tp.List[Passport]:
-        """retrieves all passports"""
-        return tp.cast(tp.List[Passport], await self._get_all_from_collection(self._unit_collection, model_=Passport))
+    async def get_passports(self, filter: Filter = {}) -> tp.List[Passport]:
+        """retrieves all units"""
+        if "date" in filter:
+            matching_uuids = await self._get_all_from_collection(
+                self._prod_stage_collection,
+                model_=ProductionStage,
+                filter={"creation_time": filter["date"]},
+                include_only="parent_unit_uuid",
+            )
+            del filter["date"]
+            filter["uuid"] = {"$in": matching_uuids}  # type: ignore
+        return tp.cast(
+            tp.List[Passport],
+            await self._get_all_from_collection(self._unit_collection, model_=Passport, filter=filter),
+        )
 
-    async def get_all_stages(self) -> tp.List[ProductionStage]:
+    async def get_stages(self, uuid: str) -> tp.List[ProductionStage]:
         """retrieves all production stages"""
         return tp.cast(
             tp.List[ProductionStage],
-            await self._get_all_from_collection(self._prod_stage_collection, model_=ProductionStage),
+            await self._get_all_from_collection(
+                self._prod_stage_collection, model_=ProductionStage, filter={"parent_unit_uuid": uuid}
+            ),
         )
 
     async def get_all_schemas(self) -> tp.List[ProductionSchema]:
@@ -167,12 +204,12 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         """count documents in employee collection"""
         return await self._count_documents_in_collection(self._employee_collection)
 
-    async def count_passports(self) -> int:
-        """count documents in employee collection"""
-        return await self._count_documents_in_collection(self._unit_collection)
+    async def count_passports(self, filter: Filter = {}) -> int:
+        """count documents in unit collection"""
+        return await self._count_documents_in_collection(self._unit_collection, filter=filter)
 
     async def count_stages(self) -> int:
-        """count documents in employee collection"""
+        """count documents in stages collection"""
         return await self._count_documents_in_collection(self._unit_collection)
 
     async def count_schemas(self) -> int:
@@ -184,12 +221,22 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         await self._add_document_to_collection(self._employee_collection, employee)
 
     async def add_passport(self, passport: Passport) -> None:
-        """add passport to database"""
+        """add unit to database"""
         await self._add_document_to_collection(self._unit_collection, passport)
 
     async def add_stage(self, stage: ProductionStage) -> None:
         """add stage to database"""
         await self._add_document_to_collection(self._prod_stage_collection, stage)
+
+    async def add_stage_to_passport(self, passport_id: str, stage: ProductionStage) -> None:
+        """add production stage to concrete unit"""
+        passport = await self.get_concrete_passport(internal_id=passport_id)
+        if passport is None:
+            raise KeyError(f"Unit with id {passport_id} not found")
+        if passport.biography is None:
+            passport.biography = []
+        passport.biography.append(stage)
+        await self.edit_passport(internal_id=passport_id, new_passport_data=passport)
 
     async def add_user(self, user: UserWithPassword) -> None:
         """add user to database"""
@@ -204,7 +251,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         await self._remove_document_from_collection(self._employee_collection, key="rfid_card_id", value=rfid_card_id)
 
     async def remove_passport(self, internal_id: str) -> None:
-        """remove passport (unit) from database"""
+        """remove unit from database"""
         await self._remove_document_from_collection(self._unit_collection, key="internal_id", value=internal_id)
 
     async def remove_stage(self, stage_id: str) -> None:
@@ -236,7 +283,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         )
 
     async def edit_passport(self, internal_id: str, new_passport_data: Passport) -> None:
-        """edit concrete passport's data"""
+        """edit concrete unit's data"""
         await self._update_document_in_collection(
             self._unit_collection,
             key="internal_id",

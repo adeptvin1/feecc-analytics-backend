@@ -16,7 +16,7 @@ def test_get_data_concrete_user():
     token = login()
     r = client.get(f"/api/v1/users/{TEST_USER.get('username')}", headers={"Authorization": f"Bearer {token}"})
     assert r.json().get("user").get("username", None) == TEST_USER.get("username")
-    assert isinstance(r.json().get("user").get("is_admin", None), bool)
+    assert isinstance(r.json().get("user").get("rule_set", None), list)
 
 
 def test_create_new_user():
@@ -29,12 +29,12 @@ def test_auth_as_a_new_user():
     token = login(fake=True)
     r = client.get("/api/v1/users/me", headers={"Authorization": f"Bearer {token}"})
     assert r.json().get("user").get("username", None), r.json()
-    assert not r.json().get("user").get("is_admin", None), r.json()
+    assert r.json().get("user").get("rule_set", None), r.json()
 
 
 def test_patch_user():
     token = login()
-    patch_user = {"username": "fakeusr", "password": "fakefake", "is_admin": False}
+    patch_user = {"username": "fakeusr", "password": "fakefake", "rule_set": ["read"]}
     r = client.patch(
         f"/api/v1/users/{FAKE_USER.get('username')}", headers={"Authorization": f"Bearer {token}"}, json=patch_user
     )

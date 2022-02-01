@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 
 
 from ..exceptions import DatabaseException
-from ..security import check_user_permissions, get_current_user
+from ..dependencies.security import check_user_permissions, get_current_user
 from ..database import MongoDbWrapper
 from ..models import ProductionSchema, ProductionSchemaOut, ProductionSchemasOut, GenericResponse
 
