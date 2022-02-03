@@ -1,7 +1,5 @@
 import datetime
-from lib2to3.pgen2.token import OP
 import os
-from sqlite3 import OptimizedUnicode
 import typing as tp
 
 from loguru import logger
@@ -181,6 +179,16 @@ class MongoDbWrapper(metaclass=SingletonMeta):
 
     async def get_passports(self, filter: Filter = {}) -> tp.List[Passport]:
         """retrieves all units"""
+        if "types" in filter:
+            matching_schemas_uuids = await self._get_all_from_collection(
+                self._schemas_types_collection,
+                model_=BaseModel,
+                filter={"schema_type": filter["types"]},
+                include_only="schema_id",
+            )
+            del filter["types"]
+            filter["schema_id"] = {"$in": matching_schemas_uuids}  # type: ignore
+
         if "date" in filter:
             matching_uuids = await self._get_all_from_collection(
                 self._prod_stage_collection,
@@ -190,6 +198,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             )
             del filter["date"]
             filter["uuid"] = {"$in": matching_uuids}  # type: ignore
+
         return tp.cast(
             tp.List[Passport],
             await self._get_all_from_collection(self._unit_collection, model_=Passport, filter=filter),

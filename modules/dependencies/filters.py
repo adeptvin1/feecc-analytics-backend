@@ -7,6 +7,7 @@ async def parse_passports_filter(
     date: tp.Optional[datetime.datetime] = None,
     overtime: tp.Optional[bool] = None,
     rework: tp.Optional[bool] = None,
+    types: tp.Optional[str] = None,
 ) -> tp.Dict[str, tp.Union[bool, str, datetime.datetime, tp.Dict[str, tp.Union[datetime.datetime, str, tp.List[str]]]]]:
     clear_filter: tp.Dict[
         str, tp.Union[bool, str, datetime.datetime, tp.Dict[str, tp.Union[datetime.datetime, str, tp.List[str]]]]
@@ -23,6 +24,10 @@ async def parse_passports_filter(
     if date is not None:
         start, end = date.replace(hour=0, minute=0, second=0), date.replace(hour=23, minute=59, second=59)
         clear_filter["date"] = {"$lt": end, "$gte": start}
+
+    if types is not None:
+        types_array: tp.List[str] = types.split(",")
+        clear_filter["types"] = {"$in": types_array}
 
     if overtime is not None:
         clear_filter["overtime"] = overtime
