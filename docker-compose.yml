@@ -3,6 +3,7 @@ services:
   feecc_analytics:
     build:
       dockerfile: Dockerfile
+      context: .
     env_file:
         - .env
     ports:
