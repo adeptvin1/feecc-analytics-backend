@@ -154,3 +154,12 @@ class IPFSData(BaseModel):
 
 class DatabaseEntryFields(BaseModel):
     fields: tp.List[str]
+
+
+class Types(BaseModel):
+    schema_id: str
+    schema_type: str
+
+
+class TypesOut(GenericResponse):
+    data: tp.List[Types]

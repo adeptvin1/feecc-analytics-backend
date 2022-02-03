@@ -5,7 +5,7 @@ from loguru import logger
 
 from ..database import MongoDbWrapper
 from ..exceptions import DatabaseException
-from ..models import GenericResponse, Passport, PassportOut, PassportsOut, ProductionStage
+from ..models import GenericResponse, Passport, PassportOut, PassportsOut, ProductionStage, TypesOut
 from ..dependencies.security import check_user_permissions, get_current_user
 from ..dependencies.filters import parse_passports_filter
 from ..types import Filter
@@ -45,6 +45,21 @@ async def get_all_passports(
         raise DatabaseException(error=exception_message)
 
     return PassportsOut(count=documents_count, data=passports)
+
+
+@router.get(
+    "/types",
+    dependencies=[Depends(check_user_permissions)],
+    response_model=tp.Union[TypesOut, GenericResponse],  # type:ignore
+)
+async def get_all_possible_types() -> tp.Union[GenericResponse, TypesOut]:
+    try:
+        types = await MongoDbWrapper().get_all_types()
+        logger.debug(types)
+    except Exception as exception_message:
+        logger.error(f"Failed to get unit types from db: Exception: {exception_message}")
+        raise DatabaseException(error=exception_message)
+    return TypesOut(data=types)
 
 
 @router.post("/", dependencies=[Depends(check_user_permissions)], response_model=GenericResponse)
