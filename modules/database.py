@@ -1,5 +1,7 @@
 import datetime
+from lib2to3.pgen2.token import OP
 import os
+from sqlite3 import OptimizedUnicode
 import typing as tp
 
 from loguru import logger
@@ -36,6 +38,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         self._prod_stage_collection: AsyncIOMotorCollection = self._database["Production-stages-data"]
         self._credentials_collection: AsyncIOMotorCollection = self._database["Analytics-credentials"]
         self._schemas_collection: AsyncIOMotorCollection = self._database["Production-schemas"]
+        self._schemas_types_collection: AsyncIOMotorClient = self._database["Production-schemas-types"]
 
         logger.info("Connected to MongoDB")
 
@@ -159,6 +162,14 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             return (
                 await self._get_element_by_key(self._prod_stage_collection, key="parent_unit_uuid", value=uuid)
             ).get("creation_time", None)
+        except Exception:
+            return None
+
+    async def get_passport_type(self, schema_id: str) -> tp.Optional[str]:
+        try:
+            return (
+                await self._get_element_by_key(self._schemas_types_collection, key="schema_id", value=schema_id)
+            ).get("schema_type", None)
         except Exception:
             return None
 

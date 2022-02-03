@@ -35,6 +35,7 @@ async def get_all_passports(
             passport.date = await MongoDbWrapper().get_passport_creation_date(uuid=passport.uuid)
             if passport.schema_id:
                 schema = await MongoDbWrapper().get_concrete_schema(schema_id=passport.schema_id)
+                passport.type = await MongoDbWrapper().get_passport_type(schema_id=passport.schema_id)
                 if schema:
                     passport.model = schema.unit_name or passport.model
     except Exception as exception_message:
