@@ -1,3 +1,4 @@
+import datetime
 import typing as tp
 
 from fastapi import APIRouter, Depends
@@ -5,7 +6,7 @@ from loguru import logger
 
 from ..database import MongoDbWrapper
 from ..exceptions import DatabaseException
-from ..models import GenericResponse, Passport, PassportOut, PassportsOut, ProductionStage, TypesOut
+from ..models import GenericResponse, OrderBy, Passport, PassportOut, PassportsOut, ProductionStage, TypesOut
 from ..dependencies.security import check_user_permissions, get_current_user
 from ..dependencies.filters import parse_passports_filter
 from ..types import Filter
@@ -18,17 +19,23 @@ router = APIRouter(dependencies=[Depends(get_current_user)])
 async def get_all_passports(
     page: int = 1,
     items: int = 20,
-    filter: Filter = Depends(parse_passports_filter),
+    sort_by_date: OrderBy = OrderBy.ascending,
+    filters: Filter = Depends(parse_passports_filter),
 ) -> PassportsOut:
     """
     Endpoint to get list of all issued units from :start: to :limit:. By default, from 0 to 20.
     """
-    logger.debug(f"Filter: {filter}")
+    logger.debug(f"Filter: {filter}, sorting by date {sort_by_date}")
     try:
-        passports = (await MongoDbWrapper().get_passports(filter))[(page - 1) * items : page * items]
-        documents_count = await MongoDbWrapper().count_passports(filter)
+        passports = await MongoDbWrapper().get_passports(filters)
+        if sort_by_date == "desc":
+            passports.reverse()
+        passports = passports[(page - 1) * items : page * items]
+
+        documents_count = await MongoDbWrapper().count_passports(filters)
 
         for passport in passports:
+            logger.debug(f"passport date: {passport.date}")
             if not passport:
                 continue
             passport.biography = await MongoDbWrapper().get_stages(uuid=passport.uuid)

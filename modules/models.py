@@ -1,4 +1,5 @@
 from __future__ import annotations
+import enum
 
 import hashlib
 import typing as tp
@@ -111,7 +112,7 @@ class Passport(BaseModel):
     featured_in_int_id: tp.Optional[str]
     barcode: tp.Optional[Barcode]
     model: tp.Optional[str] = None
-    date: tp.Optional[datetime] = None
+    date: tp.Optional[datetime] = datetime(1999, 9, 1)
     type: tp.Optional[str] = None
 
 
@@ -163,3 +164,8 @@ class Types(BaseModel):
 
 class TypesOut(GenericResponse):
     data: tp.List[str]
+
+
+class OrderBy(str, enum.Enum):
+    descending = "asc"
+    ascending = "desc"
