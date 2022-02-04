@@ -59,7 +59,7 @@ async def get_all_possible_types() -> tp.Union[GenericResponse, TypesOut]:
     except Exception as exception_message:
         logger.error(f"Failed to get unit types from db: Exception: {exception_message}")
         raise DatabaseException(error=exception_message)
-    return TypesOut(data=types)
+    return TypesOut(data=list(types))
 
 
 @router.post("/", dependencies=[Depends(check_user_permissions)], response_model=GenericResponse)

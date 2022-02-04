@@ -162,4 +162,4 @@ class Types(BaseModel):
 
 
 class TypesOut(GenericResponse):
-    data: tp.List[Types]
+    data: tp.List[str]

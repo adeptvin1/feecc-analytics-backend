@@ -171,9 +171,10 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         except Exception:
             return None
 
-    async def get_all_types(self) -> tp.List[Types]:
+    async def get_all_types(self) -> tp.Set[Types]:
         """retrieves all types"""
-        return await self._get_all_from_collection(self._schemas_types_collection, model_=Types)
+        types = await self._get_all_from_collection(self._schemas_types_collection, model_=Types)
+        return set(type.schema_type for type in types)
 
     async def get_all_employees(self) -> tp.List[Employee]:
         """retrieves all employees"""
