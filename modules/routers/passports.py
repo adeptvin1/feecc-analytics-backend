@@ -25,7 +25,7 @@ async def get_all_passports(
     """
     Endpoint to get list of all issued units from :start: to :limit:. By default, from 0 to 20.
     """
-    logger.debug(f"Filter: {filter}, sorting by date {sort_by_date}")
+    logger.debug(f"Filter: {filters}, sorting by date {sort_by_date}")
     try:
         passports = await MongoDbWrapper().get_passports(filters)
         if sort_by_date == "asc":
@@ -39,7 +39,6 @@ async def get_all_passports(
             if not passport:
                 continue
             passport.biography = await MongoDbWrapper().get_stages(uuid=passport.uuid)
-            passport.date = await MongoDbWrapper().get_passport_creation_date(uuid=passport.uuid)
             if passport.schema_id:
                 schema = await MongoDbWrapper().get_concrete_schema(schema_id=passport.schema_id)
                 passport.type = await MongoDbWrapper().get_passport_type(schema_id=passport.schema_id)
@@ -47,7 +46,7 @@ async def get_all_passports(
                     passport.model = schema.unit_name or passport.model
     except Exception as exception_message:
         logger.error(
-            f"Failed to get units from page {page} (count: {items}, filter: {filter}). Exception: {exception_message}"
+            f"Failed to get units from page {page} (count: {items}, filter: {filters}). Exception: {exception_message}"
         )
         raise DatabaseException(error=exception_message)
 
@@ -104,7 +103,6 @@ async def get_passport_by_internal_id(internal_id: str) -> tp.Union[PassportOut,
             if schema:
                 passport.model = schema.unit_name or passport.model
         passport.biography = await MongoDbWrapper().get_stages(uuid=passport.uuid)
-        passport.date = await MongoDbWrapper().get_passport_creation_date(uuid=passport.uuid)
     except Exception as exception_message:
         logger.error(f"Failed to get unit {internal_id}. Exception: {exception_message}")
         raise DatabaseException(error=exception_message)

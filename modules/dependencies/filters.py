@@ -14,12 +14,14 @@ async def parse_passports_filter(
     ] = {}
 
     if name is not None:
-        if name.startswith("url"):
+        if "url.today" in name:
             clear_filter["passport_short_url"] = name
+        elif len(name) == 32:
+            clear_filter["uuid"] = name
         elif len(name) == 13 and name.isnumeric():
             clear_filter["internal_id"] = name
         else:
-            clear_filter["model"] = {"$regex": name}
+            clear_filter["name"] = {"$regex": name}
 
     if date is not None:
         start, end = date.replace(hour=0, minute=0, second=0), date.replace(hour=23, minute=59, second=59)

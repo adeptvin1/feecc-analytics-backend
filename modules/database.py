@@ -204,6 +204,16 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             del filter["date"]
             filter["uuid"] = {"$in": matching_uuids}  # type: ignore
 
+        if "name" in filter:
+            matching_schemas_uuids = await self._get_all_from_collection(
+                self._schemas_collection,
+                model_=BaseModel,
+                filter={"unit_name": filter["name"]},
+                include_only="schema_id",
+            )
+            del filter["name"]
+            filter["schema_id"] = {"$in": matching_schemas_uuids}  # type: ignore
+
         return tp.cast(
             tp.List[Passport],
             await self._get_all_from_collection(self._unit_collection, model_=Passport, filter=filter),

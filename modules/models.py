@@ -112,7 +112,7 @@ class Passport(BaseModel):
     featured_in_int_id: tp.Optional[str]
     barcode: tp.Optional[Barcode]
     model: tp.Optional[str] = None
-    date: tp.Optional[datetime] = datetime(1999, 9, 1)
+    date: datetime = Field(alias="creation_time")
     type: tp.Optional[str] = None
 
 
