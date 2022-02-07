@@ -25,7 +25,7 @@ async def parse_passports_filter(
 
     if date is not None:
         start, end = date.replace(hour=0, minute=0, second=0), date.replace(hour=23, minute=59, second=59)
-        clear_filter["date"] = {"$lt": end, "$gte": start}
+        clear_filter["creation_time"] = {"$lt": end, "$gte": start}
 
     if types is not None:
         types_array: tp.List[str] = types.split(",")

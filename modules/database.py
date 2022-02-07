@@ -194,16 +194,6 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             del filter["types"]
             filter["schema_id"] = {"$in": matching_schemas_uuids}  # type: ignore
 
-        if "date" in filter:
-            matching_uuids = await self._get_all_from_collection(
-                self._prod_stage_collection,
-                model_=ProductionStage,
-                filter={"creation_time": filter["date"]},
-                include_only="parent_unit_uuid",
-            )
-            del filter["date"]
-            filter["uuid"] = {"$in": matching_uuids}  # type: ignore
-
         if "name" in filter:
             matching_schemas_uuids = await self._get_all_from_collection(
                 self._schemas_collection,
