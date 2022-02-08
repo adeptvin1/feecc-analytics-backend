@@ -192,7 +192,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
                 include_only="schema_id",
             )
             del filter["types"]
-            filter["schema_id"] = {"$in": matching_schemas_uuids}  # type: ignore
+            filter["schema_id"] = {"$in": matching_schemas_uuids}
 
         if "name" in filter:
             matching_schemas_uuids = await self._get_all_from_collection(
@@ -202,7 +202,10 @@ class MongoDbWrapper(metaclass=SingletonMeta):
                 include_only="schema_id",
             )
             del filter["name"]
-            filter["schema_id"] = {"$in": matching_schemas_uuids}  # type: ignore
+            if "schema_id" in filter:
+                filter["schema_id"]["$in"] = list(set(filter["schema_id"]["$in"]).intersection(set(matching_schemas_uuids)))  # type: ignore
+            else:
+                filter["schema_id"] = {"$in": matching_schemas_uuids}
 
         return tp.cast(
             tp.List[Passport],
