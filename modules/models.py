@@ -55,6 +55,7 @@ class ProductionSchema(BaseModel):
     production_stages: tp.Optional[tp.List[ProductionSchemaStage]] = None
     required_components_schema_ids: tp.Optional[tp.List[str]] = None
     parent_schema_id: tp.Optional[str] = None
+    schema_type: str
 
 
 class ProductionSchemasOut(GenericResponse):
@@ -157,11 +158,6 @@ class IPFSData(BaseModel):
 
 class DatabaseEntryFields(BaseModel):
     fields: tp.List[str]
-
-
-class Types(BaseModel):
-    schema_id: str
-    schema_type: str
 
 
 class TypesOut(GenericResponse):

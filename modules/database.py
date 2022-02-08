@@ -6,7 +6,7 @@ from loguru import logger
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection, AsyncIOMotorCursor
 from pydantic import BaseModel
 
-from .models import Employee, Passport, ProductionSchema, ProductionStage, UserWithPassword, Types
+from .models import Employee, Passport, ProductionSchema, ProductionStage, UserWithPassword
 from .singleton import SingletonMeta
 from .types import Filter
 
@@ -169,10 +169,15 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         except Exception:
             return None
 
-    async def get_all_types(self) -> tp.Set[Types]:
+    async def get_all_types(self) -> tp.Set[str]:
         """retrieves all types"""
-        types = await self._get_all_from_collection(self._schemas_types_collection, model_=Types)
-        return set(type.schema_type for type in types)
+        schemas: tp.List[ProductionSchema] = await self._get_all_from_collection(
+            self._schemas_collection, model_=ProductionSchema
+        )
+        types = set(schema.schema_type for schema in schemas)
+        # XXX: Field for testing purposes
+        types.remove("Testing")
+        return types
 
     async def get_all_employees(self) -> tp.List[Employee]:
         """retrieves all employees"""
