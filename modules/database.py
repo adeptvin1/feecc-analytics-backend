@@ -148,11 +148,9 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             return None
         return UserWithPassword(**user)
 
-    async def get_concrete_schema(self, schema_id: str) -> tp.Optional[ProductionSchema]:
+    async def get_concrete_schema(self, schema_id: str) -> ProductionSchema:
         """retrieves information about production schema"""
         schema = await self._get_element_by_key(self._schemas_collection, key="schema_id", value=schema_id)
-        if schema is None:
-            return None
         return ProductionSchema(**schema)
 
     async def get_passport_creation_date(self, uuid: str) -> tp.Optional[datetime.datetime]:

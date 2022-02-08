@@ -1,5 +1,6 @@
 import datetime
 import typing as tp
+from ..types import Filter
 
 
 async def parse_passports_filter(
@@ -8,10 +9,9 @@ async def parse_passports_filter(
     overtime: tp.Optional[bool] = None,
     rework: tp.Optional[bool] = None,
     types: tp.Optional[str] = None,
-) -> tp.Dict[str, tp.Union[bool, str, datetime.datetime, tp.Dict[str, tp.Union[datetime.datetime, str, tp.List[str]]]]]:
-    clear_filter: tp.Dict[
-        str, tp.Union[bool, str, datetime.datetime, tp.Dict[str, tp.Union[datetime.datetime, str, tp.List[str]]]]
-    ] = {}
+    unfinished: bool = False,
+) -> Filter:
+    clear_filter: Filter = {}
 
     if name is not None:
         if "url.today" in name:
@@ -36,5 +36,7 @@ async def parse_passports_filter(
 
     if rework is not None:
         clear_filter["rework"] = rework
+
+    clear_filter["passport_ipfs_cid"] = {"$ne": None} if not unfinished else None  # type: ignore
 
     return clear_filter

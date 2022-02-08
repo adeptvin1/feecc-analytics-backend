@@ -114,6 +114,8 @@ class Passport(BaseModel):
     model: tp.Optional[str] = None
     date: datetime = Field(alias="creation_time")
     type: tp.Optional[str] = None
+    parential_unit: tp.Optional[str] = None
+    passport_ipfs_cid: tp.Optional[str] = None
 
 
 class PassportsOut(GenericResponse):

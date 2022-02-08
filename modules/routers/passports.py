@@ -32,7 +32,7 @@ async def get_all_passports(
             passports.reverse()
         passports = passports[(page - 1) * items : page * items]
 
-        documents_count = await MongoDbWrapper().count_passports(filters)
+        documents_count = len(passports)
 
         for passport in passports:
             logger.debug(f"passport date: {passport.date}")
@@ -44,6 +44,10 @@ async def get_all_passports(
                 passport.type = await MongoDbWrapper().get_passport_type(schema_id=passport.schema_id)
                 if schema:
                     passport.model = schema.unit_name or passport.model
+                    if schema.parent_schema_id:
+                        passport.parential_unit = (
+                            await MongoDbWrapper().get_concrete_schema(schema_id=schema.parent_schema_id)
+                        ).unit_name
     except Exception as exception_message:
         logger.error(
             f"Failed to get units from page {page} (count: {items}, filter: {filters}). Exception: {exception_message}"
