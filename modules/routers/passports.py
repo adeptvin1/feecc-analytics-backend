@@ -62,7 +62,7 @@ async def get_all_passports(
     dependencies=[Depends(check_user_permissions)],
     response_model=tp.Union[TypesOut, GenericResponse],  # type:ignore
 )
-async def get_all_possible_types() -> tp.Union[GenericResponse, TypesOut]:
+async def get_all_possible_types() -> TypesOut:
     try:
         types = await MongoDbWrapper().get_all_types()
         logger.debug(types)
@@ -106,6 +106,12 @@ async def get_passport_by_internal_id(internal_id: str) -> tp.Union[PassportOut,
             schema = await MongoDbWrapper().get_concrete_schema(schema_id=passport.schema_id)
             if schema:
                 passport.model = schema.unit_name or passport.model
+                passport.type = await MongoDbWrapper().get_passport_type(schema_id=passport.schema_id)
+                passport.model = schema.unit_name or passport.model
+                if schema.parent_schema_id:
+                    passport.parential_unit = (
+                        await MongoDbWrapper().get_concrete_schema(schema_id=schema.parent_schema_id)
+                    ).unit_name
         passport.biography = await MongoDbWrapper().get_stages(uuid=passport.uuid)
     except Exception as exception_message:
         logger.error(f"Failed to get unit {internal_id}. Exception: {exception_message}")
