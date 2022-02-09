@@ -84,39 +84,32 @@ class Employee(BaseModel):
 
 class ProductionStage(BaseModel):
     name: str
-    employee_name: tp.Optional[tp.Union[str, Employee]]
+    employee_name: str
     parent_unit_uuid: str
     session_start_time: str
     session_end_time: tp.Optional[str]
+    ended_prematurely: bool
     video_hashes: tp.Optional[tp.List[str]]
     additional_info: tp.Dict[tp.Any, tp.Any]
     id: str
     is_in_db: bool
-    creation_time: tp.Optional[datetime]
-
-
-class Barcode(BaseModel):
-    unit_code: tp.Optional[str]
-    barcode: tp.Optional[str]
-    basename: tp.Optional[str]
-    filename: tp.Optional[str]
+    creation_time: datetime
 
 
 class Passport(BaseModel):
+    schema_id: tp.Optional[str] = None
     uuid: str
     internal_id: str
     passport_short_url: tp.Optional[str]
+    passport_ipfs_cid: tp.Optional[str] = None
     is_in_db: bool
-    schema_id: tp.Optional[str] = None
-    biography: tp.Optional[tp.List[ProductionStage]]
-    components_units: tp.Optional[tp.Dict[str, tp.Any]] = None
     featured_in_int_id: tp.Optional[str]
-    barcode: tp.Optional[Barcode]
+    biography: tp.Optional[tp.List[ProductionStage]]
+    components_internal_ids: tp.Optional[tp.List[str]]
     model: tp.Optional[str] = None
     date: datetime = Field(alias="creation_time")
     type: tp.Optional[str] = None
     parential_unit: tp.Optional[str] = None
-    passport_ipfs_cid: tp.Optional[str] = None
 
 
 class PassportsOut(GenericResponse):
