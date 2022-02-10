@@ -118,6 +118,17 @@ class MongoDbWrapper(metaclass=SingletonMeta):
                 return employee
         return None
 
+    async def get_components_internal_id(self, uuids: tp.Optional[tp.List[str]]) -> tp.List[str]:
+        if not uuids:
+            return []
+        int_ids: tp.List[str] = []
+        for uuid in uuids:
+            passport = await self.get_concrete_passport(uuid=uuid)
+            if passport is None:
+                continue
+            int_ids.append(passport.internal_id)
+        return int_ids
+
     async def get_concrete_employee(self, card_id: str) -> tp.Optional[Employee]:
         """retrieves an employee by card_id"""
         employee = await self._get_element_by_key(self._employee_collection, key="rfid_card_id", value=card_id)
@@ -125,9 +136,16 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             return None
         return Employee(**employee)
 
-    async def get_concrete_passport(self, internal_id: str) -> tp.Optional[Passport]:
-        """retrieves unit by its internal id"""
-        passport = await self._get_element_by_key(self._unit_collection, key="internal_id", value=internal_id)
+    async def get_concrete_passport(
+        self, internal_id: tp.Optional[str] = None, uuid: tp.Optional[str] = None
+    ) -> tp.Optional[Passport]:
+        """retrieves unit by its internal id or uuid"""
+        if internal_id and uuid:
+            raise ValueError("Unit search only available by uuid or internal_id")
+        if internal_id:
+            passport = await self._get_element_by_key(self._unit_collection, key="internal_id", value=internal_id)
+        if uuid:
+            passport = await self._get_element_by_key(self._unit_collection, key="uuid", value=uuid)
         if not passport:
             return None
         return Passport(**passport)

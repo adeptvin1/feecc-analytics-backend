@@ -160,3 +160,10 @@ class TypesOut(GenericResponse):
 class OrderBy(str, enum.Enum):
     descending = "asc"
     ascending = "desc"
+
+
+class ProdStageStatus(str, enum.Enum):
+    production = "production"
+    built = "built"
+    revision = "revision"
+    finalized = "finalized"
