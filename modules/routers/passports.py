@@ -119,6 +119,24 @@ async def get_passport_by_internal_id(internal_id: str) -> tp.Union[PassportOut,
     return PassportOut(passport=passport)
 
 
+@router.post("/{internal_id}/serial")
+async def update_serial_number(internal_id: str, serial_number: str) -> GenericResponse:
+    """
+    Update passport's serial number
+    """
+    try:
+        current_serial_number: tp.Optional[str] = await MongoDbWrapper().get_passport_serial_number(
+            internal_id=internal_id
+        )
+        if current_serial_number != serial_number:
+            await MongoDbWrapper().update_serial_number(internal_id=internal_id, serial_number=serial_number)
+
+    except Exception as exception_message:
+        logger.error(f"An error occured while updating serial number {exception_message}")
+        raise DatabaseException(error=exception_message)
+    return GenericResponse()
+
+
 @router.patch("/{internal_id}", dependencies=[Depends(check_user_permissions)], response_model=GenericResponse)
 async def patch_passport(internal_id: str, new_data: Passport) -> GenericResponse:
     """

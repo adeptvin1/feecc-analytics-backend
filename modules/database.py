@@ -100,10 +100,19 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         new_data: BaseModel,
         exclude: tp.Optional[tp.Set[str]] = None,
     ) -> None:
+        logger.warning("Using deprecated method _update_document_in_collection() use _update_document() instead")
         if exclude:
             await collection_.find_one_and_update({key: value}, {"$set": new_data.dict(exclude=exclude)})
         else:
             await collection_.find_one_and_update({key: value}, {"$set": new_data.dict()})
+
+    @staticmethod
+    async def _update_document(
+        collection: AsyncIOMotorCollection, filter: tp.Dict[str, str], new_data: tp.Dict[str, str]
+    ) -> None:
+        if not filter or not new_data:
+            raise ValueError(f"Expected filter and new_data, got {filter}:{new_data}")
+        await collection.find_one_and_update(filter, {"$set": new_data})
 
     async def decode_employee(self, hashed_employee: str) -> tp.Optional[Employee]:
         """Find an employee by hashed data"""
@@ -186,6 +195,12 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             ).get("schema_type", None)
         except Exception:
             return None
+
+    async def get_passport_serial_number(self, internal_id: str) -> tp.Optional[str]:
+        passport = await self.get_concrete_passport(internal_id=internal_id)
+        if not passport:
+            return None
+        return passport.serial_number
 
     async def get_all_types(self) -> tp.Set[str]:
         """retrieves all types"""
@@ -362,4 +377,10 @@ class MongoDbWrapper(metaclass=SingletonMeta):
                 "is_in_db",
                 "creation_time",
             },
+        )
+
+    async def update_serial_number(self, internal_id: str, serial_number: str) -> None:
+        """update conrete passport serial_number by internal_id"""
+        await self._update_document(
+            self._unit_collection, filter={"internal_id": internal_id}, new_data={"serial_number": serial_number}
         )

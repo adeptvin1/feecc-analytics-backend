@@ -110,6 +110,7 @@ class Passport(BaseModel):
     date: datetime = Field(alias="creation_time")
     type: tp.Optional[str] = None
     parential_unit: tp.Optional[str] = None
+    serial_number: tp.Optional[str] = None
 
 
 class PassportsOut(GenericResponse):
