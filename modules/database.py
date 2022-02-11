@@ -29,7 +29,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
 
         logger.debug(f"Connected to MongoDB at {mongo_client_url}")
 
-        self._database = mongo_client["Feecc-Hub"]
+        self._database = mongo_client[os.environ.get("MONGO_DATABASE_NAME")]
 
         self._employee_collection: AsyncIOMotorCollection = self._database["Employee-data"]
         self._unit_collection: AsyncIOMotorCollection = self._database["Unit-data"]

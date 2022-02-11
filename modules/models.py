@@ -17,6 +17,7 @@ class GenericResponse(BaseModel):
 class User(BaseModel):
     username: str
     rule_set: tp.List[str] = ["read"]
+    associated_employee: tp.Optional[str]
 
 
 class UserOut(GenericResponse):
@@ -91,14 +92,24 @@ class ProductionStage(BaseModel):
     ended_prematurely: bool
     video_hashes: tp.Optional[tp.List[str]]
     additional_info: tp.Dict[tp.Any, tp.Any]
-    id: str
+    id: str = Field(default_factory=lambda: uuid4().hex)
     is_in_db: bool
     creation_time: datetime
+
+    completed: tp.Optional[bool]
+    number: tp.Optional[int]
+
+
+class UnitStatus(str, enum.Enum):
+    production = "production"
+    built = "built"
+    revision = "revision"
+    finalized = "finalized"
 
 
 class Passport(BaseModel):
     schema_id: tp.Optional[str] = None
-    uuid: str
+    uuid: str = Field(default_factory=lambda: uuid4().hex)
     internal_id: str
     passport_short_url: tp.Optional[str]
     passport_ipfs_cid: tp.Optional[str] = None
@@ -111,6 +122,7 @@ class Passport(BaseModel):
     type: tp.Optional[str] = None
     parential_unit: tp.Optional[str] = None
     serial_number: tp.Optional[str] = None
+    status: tp.Optional[UnitStatus] = None
 
 
 class PassportsOut(GenericResponse):
@@ -161,10 +173,3 @@ class TypesOut(GenericResponse):
 class OrderBy(str, enum.Enum):
     descending = "asc"
     ascending = "desc"
-
-
-class ProdStageStatus(str, enum.Enum):
-    production = "production"
-    built = "built"
-    revision = "revision"
-    finalized = "finalized"
