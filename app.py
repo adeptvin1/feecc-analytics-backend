@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 import os
 
-from modules.routers import employees, external_ops, passports, service, stages, users, schemas
+from modules.routers import employees, external_ops, passports, service, stages, users, schemas, quality_control
 
 api = FastAPI()
 
@@ -46,3 +46,4 @@ api.include_router(stages.router, prefix="/api/v1/stages", tags=["Production Sta
 api.include_router(users.router, prefix="/api/v1/users", tags=["Analytics Users Management"])
 api.include_router(service.router, tags=["Service Endpoints"])
 api.include_router(external_ops.router, tags=["External Operations"])
+api.include_router(quality_control.router, tags=["Quality Control Operations endpoints"])
