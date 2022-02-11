@@ -14,6 +14,21 @@ class GenericResponse(BaseModel):
     detail: tp.Optional[str] = "Successful"
 
 
+class Employee(BaseModel):
+    rfid_card_id: str
+    name: str
+    position: str
+
+    async def compose(self) -> str:
+        return " ".join([self.rfid_card_id, self.name, self.position])
+
+    async def encode_sha256(self) -> str:
+        employee_passport_string: str = await self.compose()
+        employee_passport_string_encoded: bytes = employee_passport_string.encode()
+        employee_passport_code: str = hashlib.sha256(employee_passport_string_encoded).hexdigest()
+        return employee_passport_code
+
+
 class User(BaseModel):
     username: str
     rule_set: tp.List[str] = ["read"]
@@ -22,6 +37,7 @@ class User(BaseModel):
 
 class UserOut(GenericResponse):
     user: tp.Optional[User]
+    associated_employee: tp.Optional[Employee]
 
 
 class UserWithPassword(User):
@@ -66,21 +82,6 @@ class ProductionSchemasOut(GenericResponse):
 
 class ProductionSchemaOut(GenericResponse):
     schema_: tp.Annotated[tp.Optional[ProductionSchema], Field(alias="schema")]
-
-
-class Employee(BaseModel):
-    rfid_card_id: str
-    name: str
-    position: str
-
-    async def compose(self) -> str:
-        return " ".join([self.rfid_card_id, self.name, self.position])
-
-    async def encode_sha256(self) -> str:
-        employee_passport_string: str = await self.compose()
-        employee_passport_string_encoded: bytes = employee_passport_string.encode()
-        employee_passport_code: str = hashlib.sha256(employee_passport_string_encoded).hexdigest()
-        return employee_passport_code
 
 
 class ProductionStage(BaseModel):

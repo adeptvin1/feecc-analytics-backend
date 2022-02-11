@@ -4,16 +4,18 @@ from fastapi import APIRouter, Depends
 
 from ..database import MongoDbWrapper
 from ..exceptions import DatabaseException
-from ..models import GenericResponse, User, UserOut, UserWithPassword
-from ..dependencies.security import check_user_permissions, create_new_user, get_current_user
+from ..models import Employee, GenericResponse, User, UserOut, UserWithPassword
+from ..dependencies.security import check_user_permissions, create_new_user, get_current_user, get_current_employee
 
 router = APIRouter()
 
 
 @router.get("/me", response_model=tp.Union[UserOut, GenericResponse])  # type:ignore
-async def read_users_me(user: User = Depends(get_current_user)) -> UserOut:
+async def read_users_me(
+    user: User = Depends(get_current_user), employee: tp.Optional[Employee] = Depends(get_current_employee)
+) -> UserOut:
     """Returns various information about current user by token"""
-    return UserOut(user=user)
+    return UserOut(user=user, associated_employee=employee)
 
 
 @router.post("/", response_model=GenericResponse, dependencies=[Depends(check_user_permissions)])
