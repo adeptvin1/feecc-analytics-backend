@@ -86,13 +86,13 @@ class ProductionSchemaOut(GenericResponse):
 
 class ProductionStage(BaseModel):
     name: str
-    employee_name: str
+    employee_name: tp.Optional[str]
     parent_unit_uuid: str
-    session_start_time: str
+    session_start_time: tp.Optional[str]
     session_end_time: tp.Optional[str]
     ended_prematurely: bool
     video_hashes: tp.Optional[tp.List[str]]
-    additional_info: tp.Dict[tp.Any, tp.Any]
+    additional_info: tp.Optional[tp.Dict[tp.Any, tp.Any]]
     id: str = Field(default_factory=lambda: uuid4().hex)
     is_in_db: bool
     creation_time: datetime

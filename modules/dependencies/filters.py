@@ -1,6 +1,9 @@
 import datetime
 import typing as tp
+
+from pydantic import Field
 from ..types import Filter
+from ..models import UnitStatus
 
 
 async def parse_passports_filter(
@@ -9,7 +12,7 @@ async def parse_passports_filter(
     overtime: tp.Optional[bool] = None,
     rework: tp.Optional[bool] = None,
     types: tp.Optional[str] = None,
-    unfinished: bool = False,
+    status: UnitStatus = UnitStatus.finalized,
 ) -> Filter:
     clear_filter: Filter = {}
 
@@ -37,6 +40,7 @@ async def parse_passports_filter(
     if rework is not None:
         clear_filter["rework"] = rework
 
-    clear_filter["passport_ipfs_cid"] = {"$ne": None} if not unfinished else None  # type: ignore
+    if status:
+        clear_filter["status"] = status
 
     return clear_filter
