@@ -6,7 +6,16 @@ from loguru import logger
 
 from ..database import MongoDbWrapper
 from ..exceptions import DatabaseException
-from ..models import GenericResponse, OrderBy, Passport, PassportOut, PassportsOut, ProductionStage, TypesOut
+from ..models import (
+    GenericResponse,
+    OrderBy,
+    Passport,
+    PassportOut,
+    PassportsOut,
+    ProductionStage,
+    TypesOut,
+    UnitStatus,
+)
 from ..dependencies.security import check_user_permissions, get_current_user
 from ..dependencies.filters import parse_passports_filter
 from ..types import Filter
@@ -152,6 +161,18 @@ async def patch_passport(internal_id: str, new_data: Passport) -> GenericRespons
         logger.error(f"Failed to patch unit {internal_id} with data {new_data.dict()}. Exception: {exception_message}")
         raise DatabaseException(error=exception_message)
     return GenericResponse(detail="Successfully patched unit")
+
+
+@router.post("/{internal_id}/revision")
+async def send_for_revision(internal_id: str, stages_ids: tp.List[str]) -> GenericResponse:
+    logger.info(f"Sending unit {internal_id} for revision")
+    try:
+        await MongoDbWrapper().update_passport_status(internal_id=internal_id, status="revision")
+        await MongoDbWrapper().send_unit_for_revision(internal_id=internal_id, stage_ids=stages_ids)
+    except Exception as exception_message:
+        logger.error(f"Failed to send unit {internal_id} for revision. Exception: {exception_message}")
+        raise DatabaseException(error=exception_message)
+    return GenericResponse(detail="Successfully sent unit for revision")
 
 
 @router.post(

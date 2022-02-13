@@ -103,6 +103,18 @@ class ProductionStage(BaseModel):
     unit_name: tp.Optional[str]
     parent_unit_internal_id: tp.Optional[str]
 
+    async def clear(self) -> ProductionStage:
+        return ProductionStage(
+            name=self.name,
+            parent_unit_uuid=self.parent_unit_uuid,
+            ended_prematurely=False,
+            is_in_db=True,
+            creation_time=datetime.now(),
+            session_start_time=None,
+            session_end_time=None,
+            completed=False,
+        )
+
 
 class UnitStatus(str, enum.Enum):
     production = "production"

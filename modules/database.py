@@ -6,7 +6,7 @@ from loguru import logger
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection, AsyncIOMotorCursor
 from pydantic import BaseModel
 
-from .models import Employee, Passport, ProductionSchema, ProductionStage, UserWithPassword
+from .models import Employee, Passport, ProductionSchema, ProductionStage, UnitStatus, UserWithPassword
 from .singleton import SingletonMeta
 from .types import Filter
 
@@ -219,6 +219,15 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             return None
         return (await self.get_concrete_schema(schema_id=passport.schema_id)).unit_name
 
+    async def get_passport_status(self, internal_id: str) -> tp.Optional[str]:
+        """retrieves concrete passport status"""
+        passport = await MongoDbWrapper().get_concrete_passport(internal_id=internal_id)
+        if passport is None:
+            return None
+        if passport.status is None:
+            return None
+        return passport.status
+
     async def get_all_types(self) -> tp.Set[str]:
         """retrieves all types"""
         schemas: tp.List[ProductionSchema] = await self._get_all_from_collection(
@@ -340,6 +349,9 @@ class MongoDbWrapper(metaclass=SingletonMeta):
 
     async def add_stage(self, stage: ProductionStage) -> None:
         """add stage to database"""
+        logger.debug(
+            f'Added stage {stage.dict(exclude={"completed", "number", "unit_name", "parent_unit_internal_id", "video_hashes", "additional_info"})}'
+        )
         await self._add_document_to_collection(self._prod_stage_collection, stage)
 
     async def add_stage_to_passport(self, passport_id: str, stage: ProductionStage) -> None:
@@ -430,7 +442,39 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         )
 
     async def update_serial_number(self, internal_id: str, serial_number: str) -> None:
-        """update conrete passport serial_number by internal_id"""
+        """update concrete passport serial_number by internal_id"""
         await self._update_document(
             self._unit_collection, filter={"internal_id": internal_id}, new_data={"serial_number": serial_number}
         )
+
+    async def update_passport_status(self, internal_id: str, status: str) -> None:
+        """update concrete passport status"""
+        current_status = await self.get_passport_status(internal_id=internal_id)
+        if status == current_status:
+            logger.warning(f"Trying to change status from {current_status} to {status}")
+            return None
+        await self._update_document(self._unit_collection, {"internal_id": internal_id}, {"status": status})
+
+    async def send_unit_for_revision(self, internal_id: str, stage_ids: tp.List[str]) -> None:
+        passport = await self.get_concrete_passport(internal_id=internal_id)
+        if not passport:
+            raise ValueError(f"Can't send unit for revision. Passport {internal_id} not found")
+
+        current_status = passport.status
+        if current_status != "built":
+            raise ValueError(f"Can't send unit for revision. Current status {current_status}")
+        if not len(stage_ids):
+            raise ValueError(f"Can't send unit for revision. No stage_ids provided")
+
+        for stage_id in stage_ids:
+            stage = await self.get_concrete_stage(stage_id=stage_id)
+
+            if not stage:
+                raise ValueError(f"Can't send unit for revision. Stage with id {stage_id} not found")
+
+            if stage.parent_unit_uuid != passport.uuid:
+                raise ValueError(
+                    f"Can't send unit for revision. Stage {stage.id} not associated with passport {internal_id}"
+                )
+
+            await self.add_stage(await stage.clear())
