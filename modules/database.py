@@ -489,4 +489,4 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             if not stages:
                 raise ValueError(f"Can't send unit for revision. Passport {internal_id} have 0 stages")
 
-            await self.add_stage(await stage.clear(number=len(stages) + 1))
+            await self.add_stage(await stage.clear(number=len(stages)))
