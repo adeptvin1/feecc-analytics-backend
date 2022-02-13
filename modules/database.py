@@ -12,7 +12,6 @@ from .models import (
     ProductionSchema,
     ProductionStage,
     ProductionStageData,
-    UnitStatus,
     UserWithPassword,
 )
 from .singleton import SingletonMeta

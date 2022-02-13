@@ -73,6 +73,7 @@ class ProductionSchema(BaseModel):
     required_components_schema_ids: tp.Optional[tp.List[str]] = None
     parent_schema_id: tp.Optional[str] = None
     schema_type: str
+    stage_id: str
 
 
 class ProductionSchemasOut(GenericResponse):
@@ -96,6 +97,7 @@ class ProductionStage(BaseModel):
     id: str = Field(default_factory=lambda: uuid4().hex)
     is_in_db: bool
     creation_time: datetime
+    schema_stage_id: str
 
     completed: tp.Optional[bool]
     number: tp.Optional[int]

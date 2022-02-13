@@ -1,4 +1,3 @@
-import datetime
 import typing as tp
 
 from fastapi import APIRouter, Depends
@@ -12,9 +11,7 @@ from ..models import (
     Passport,
     PassportOut,
     PassportsOut,
-    ProductionStage,
     TypesOut,
-    UnitStatus,
 )
 from ..dependencies.security import check_user_permissions, get_current_user
 from ..dependencies.filters import parse_passports_filter
