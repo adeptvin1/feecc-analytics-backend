@@ -1,4 +1,5 @@
 from __future__ import annotations
+import enum
 
 import hashlib
 import typing as tp
@@ -13,13 +14,30 @@ class GenericResponse(BaseModel):
     detail: tp.Optional[str] = "Successful"
 
 
+class Employee(BaseModel):
+    rfid_card_id: str
+    name: str
+    position: str
+
+    async def compose(self) -> str:
+        return " ".join([self.rfid_card_id, self.name, self.position])
+
+    async def encode_sha256(self) -> str:
+        employee_passport_string: str = await self.compose()
+        employee_passport_string_encoded: bytes = employee_passport_string.encode()
+        employee_passport_code: str = hashlib.sha256(employee_passport_string_encoded).hexdigest()
+        return employee_passport_code
+
+
 class User(BaseModel):
     username: str
     rule_set: tp.List[str] = ["read"]
+    associated_employee: tp.Optional[str]
 
 
 class UserOut(GenericResponse):
     user: tp.Optional[User]
+    associated_employee: tp.Optional[Employee]
 
 
 class UserWithPassword(User):
@@ -46,6 +64,7 @@ class ProductionSchemaStage(BaseModel):
     equipment: tp.Optional[tp.List[str]] = None
     workplace: tp.Optional[str] = None
     duration_seconds: tp.Optional[int] = None
+    stage_id: str
 
 
 class ProductionSchema(BaseModel):
@@ -54,6 +73,7 @@ class ProductionSchema(BaseModel):
     production_stages: tp.Optional[tp.List[ProductionSchemaStage]] = None
     required_components_schema_ids: tp.Optional[tp.List[str]] = None
     parent_schema_id: tp.Optional[str] = None
+    schema_type: str
 
 
 class ProductionSchemasOut(GenericResponse):
@@ -65,54 +85,68 @@ class ProductionSchemaOut(GenericResponse):
     schema_: tp.Annotated[tp.Optional[ProductionSchema], Field(alias="schema")]
 
 
-class Employee(BaseModel):
-    rfid_card_id: str
-    name: str
-    position: str
-
-    async def compose(self) -> str:
-        return " ".join([self.rfid_card_id, self.name, self.position])
-
-    async def encode_sha256(self) -> str:
-        employee_passport_string: str = await self.compose()
-        employee_passport_string_encoded: bytes = employee_passport_string.encode()
-        employee_passport_code: str = hashlib.sha256(employee_passport_string_encoded).hexdigest()
-        return employee_passport_code
-
-
 class ProductionStage(BaseModel):
     name: str
-    employee_name: tp.Optional[tp.Union[str, Employee]]
+    employee_name: tp.Optional[str]
     parent_unit_uuid: str
-    session_start_time: str
+    session_start_time: tp.Optional[str]
     session_end_time: tp.Optional[str]
+    ended_prematurely: bool
     video_hashes: tp.Optional[tp.List[str]]
-    additional_info: tp.Dict[tp.Any, tp.Any]
-    id: str
+    additional_info: tp.Optional[tp.Dict[tp.Any, tp.Any]]
+    id: str = Field(default_factory=lambda: uuid4().hex)
     is_in_db: bool
-    creation_time: tp.Optional[datetime]
+    creation_time: datetime
+    schema_stage_id: tp.Optional[str]
+
+    completed: tp.Optional[bool]
+    number: tp.Optional[int]
+
+    async def clear(self, number: int) -> ProductionStage:
+        return ProductionStage(
+            name=self.name,
+            parent_unit_uuid=self.parent_unit_uuid,
+            ended_prematurely=False,
+            is_in_db=True,
+            creation_time=datetime.now(),
+            session_start_time=None,
+            session_end_time=None,
+            completed=False,
+            number=number,
+            additional_info={},
+            schema_stage_id=self.schema_stage_id,
+        )
 
 
-class Barcode(BaseModel):
-    unit_code: tp.Optional[str]
-    barcode: tp.Optional[str]
-    basename: tp.Optional[str]
-    filename: tp.Optional[str]
+class ProductionStageData(ProductionStage):
+    unit_name: tp.Optional[str]
+    parent_unit_internal_id: tp.Optional[str]
+
+
+class UnitStatus(str, enum.Enum):
+    production = "production"
+    built = "built"
+    revision = "revision"
+    approved = "approved"
+    finalized = "finalized"
 
 
 class Passport(BaseModel):
-    uuid: str
+    schema_id: tp.Optional[str] = None
+    uuid: str = Field(default_factory=lambda: uuid4().hex)
     internal_id: str
     passport_short_url: tp.Optional[str]
+    passport_ipfs_cid: tp.Optional[str] = None
     is_in_db: bool
-    schema_id: tp.Optional[str] = None
-    biography: tp.Optional[tp.List[ProductionStage]]
-    components_units: tp.Optional[tp.Dict[str, tp.Any]] = None
     featured_in_int_id: tp.Optional[str]
-    barcode: tp.Optional[Barcode]
+    biography: tp.Optional[tp.List[ProductionStageData]]
+    components_internal_ids: tp.Optional[tp.List[str]]
     model: tp.Optional[str] = None
-    date: tp.Optional[datetime] = None
+    date: datetime = Field(alias="creation_time")
     type: tp.Optional[str] = None
+    parential_unit: tp.Optional[str] = None
+    serial_number: tp.Optional[str] = None
+    status: tp.Optional[UnitStatus] = None
 
 
 class PassportsOut(GenericResponse):
@@ -154,3 +188,12 @@ class IPFSData(BaseModel):
 
 class DatabaseEntryFields(BaseModel):
     fields: tp.List[str]
+
+
+class TypesOut(GenericResponse):
+    data: tp.List[str]
+
+
+class OrderBy(str, enum.Enum):
+    descending = "asc"
+    ascending = "desc"

@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 import os
 
-from modules.routers import employees, external_ops, passports, service, stages, users, schemas
+from modules.routers import employees, external_ops, passports, service, stages, users, schemas, quality_control
 
 api = FastAPI()
 
@@ -39,8 +39,9 @@ def shutdown_event() -> None:
     logger.success("Shutting down feecc analytics backend server...")
 
 
-api.include_router(employees.router, prefix="/api/v1/employees", tags=["Employees Management"])
 api.include_router(passports.router, prefix="/api/v1/passports", tags=["Passports (Units) Management"])
+api.include_router(quality_control.router, prefix="/api/v1/tcd", tags=["Quality Control Operations endpoints"])
+api.include_router(employees.router, prefix="/api/v1/employees", tags=["Employees Management"])
 api.include_router(schemas.router, prefix="/api/v1/schemas", tags=["Production Schemas Management"])
 api.include_router(stages.router, prefix="/api/v1/stages", tags=["Production Stages Management"])
 api.include_router(users.router, prefix="/api/v1/users", tags=["Analytics Users Management"])

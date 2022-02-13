@@ -10,7 +10,7 @@ from passlib.context import CryptContext
 
 from modules.database import MongoDbWrapper
 from modules.exceptions import CredentialsValidationException, ForbiddenActionException
-from modules.models import NewUser, TokenData, User, UserWithPassword
+from modules.models import Employee, NewUser, TokenData, User, UserWithPassword
 
 SECRET_KEY = os.environ.get("SECRET_KEY")
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
@@ -80,3 +80,9 @@ async def create_new_user(user: NewUser) -> UserWithPassword:
     return UserWithPassword(
         username=user.username, rule_set=user.rule_set, hashed_password=get_password_hash(user.password)
     )
+
+
+async def get_current_employee(user: User = Depends(get_current_user)) -> tp.Optional[Employee]:
+    if not user.associated_employee:
+        return None
+    return await MongoDbWrapper().get_concrete_employee(card_id=user.associated_employee)
