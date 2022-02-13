@@ -127,6 +127,13 @@ class MongoDbWrapper(metaclass=SingletonMeta):
                 return employee
         return None
 
+    async def get_internal_id_by_uuid(self, uuid: str) -> str:
+        """Get internal id by given uuid"""
+        passport = await self.get_concrete_passport(uuid=uuid)
+        if passport is None:
+            raise ValueError(f"Can't find passport with uuid {uuid}")
+        return passport.internal_id
+
     async def get_components_internal_id(self, uuids: tp.Optional[tp.List[str]]) -> tp.List[str]:
         if not uuids:
             return []
@@ -189,6 +196,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             return None
 
     async def get_passport_type(self, schema_id: str) -> tp.Optional[str]:
+        logger.debug("Using deprecated method get_passport_type, now Unit have field type. Use it instead.")
         try:
             return (
                 await self._get_element_by_key(self._schemas_types_collection, key="schema_id", value=schema_id)
@@ -201,6 +209,14 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         if not passport:
             return None
         return passport.serial_number
+
+    async def get_passport_name(self, internal_id: str) -> tp.Optional[str]:
+        passport = await self.get_concrete_passport(internal_id=internal_id)
+        if not passport:
+            return None
+        if not passport.schema_id:
+            return None
+        return (await self.get_concrete_schema(schema_id=passport.schema_id)).unit_name
 
     async def get_all_types(self) -> tp.Set[str]:
         """retrieves all types"""
@@ -248,14 +264,41 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             await self._get_all_from_collection(self._unit_collection, model_=Passport, filter=filter),
         )
 
-    async def get_stages(self, uuid: str) -> tp.List[ProductionStage]:
+    async def get_stages(
+        self, internal_id: tp.Optional[str] = None, uuid: tp.Optional[str] = None
+    ) -> tp.List[ProductionStage]:
         """retrieves all production stages"""
-        return tp.cast(
-            tp.List[ProductionStage],
-            await self._get_all_from_collection(
+        stages: tp.List[ProductionStage]
+
+        if internal_id and uuid:
+            raise ValueError("Stages search only available by uuid or internal_id")
+        if uuid:
+            stages = await self._get_all_from_collection(
                 self._prod_stage_collection, model_=ProductionStage, filter={"parent_unit_uuid": uuid}
-            ),
-        )
+            )
+            for stage in stages:
+                if not stage.parent_unit_uuid:
+                    continue
+                stage.unit_name = await self.get_passport_name(
+                    await self.get_internal_id_by_uuid(stage.parent_unit_uuid)
+                )
+
+            return stages
+        if internal_id:
+            passport = await self.get_concrete_passport(internal_id=internal_id)
+            if not passport:
+                return []
+            stages = await self._get_all_from_collection(
+                self._prod_stage_collection, model_=ProductionStage, filter={"parent_unit_uuid": passport.uuid}
+            )
+            for stage in stages:
+                stage.unit_name = await self.get_passport_name(
+                    await self.get_internal_id_by_uuid(stage.parent_unit_uuid)
+                )
+
+            return stages
+
+        return []
 
     async def get_all_schemas(self) -> tp.List[ProductionSchema]:
         """retrieves all production schemas"""

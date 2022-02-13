@@ -7,12 +7,12 @@ from ..models import UnitStatus
 
 
 async def parse_passports_filter(
+    status: tp.Optional[UnitStatus] = None,
     name: tp.Optional[str] = None,
     date: tp.Optional[datetime.datetime] = None,
     overtime: tp.Optional[bool] = None,
     rework: tp.Optional[bool] = None,
     types: tp.Optional[str] = None,
-    status: UnitStatus = UnitStatus.finalized,
 ) -> Filter:
     clear_filter: Filter = {}
 

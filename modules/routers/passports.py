@@ -107,12 +107,15 @@ async def get_passport_by_internal_id(internal_id: str) -> tp.Union[PassportOut,
             if schema:
                 passport.model = schema.unit_name or passport.model
                 passport.type = await MongoDbWrapper().get_passport_type(schema_id=passport.schema_id)
-                passport.model = schema.unit_name or passport.model
                 if schema.parent_schema_id:
                     passport.parential_unit = (
                         await MongoDbWrapper().get_concrete_schema(schema_id=schema.parent_schema_id)
                     ).unit_name
         passport.biography = await MongoDbWrapper().get_stages(uuid=passport.uuid)
+        if passport.biography:
+            if passport.components_internal_ids:
+                for int_id in passport.components_internal_ids:
+                    passport.biography += await MongoDbWrapper().get_stages(internal_id=int_id)
     except Exception as exception_message:
         logger.error(f"Failed to get unit {internal_id}. Exception: {exception_message}")
         raise DatabaseException(error=exception_message)
@@ -151,7 +154,12 @@ async def patch_passport(internal_id: str, new_data: Passport) -> GenericRespons
     return GenericResponse(detail="Successfully patched unit")
 
 
-@router.post("/{internal_id}/add_stage", dependencies=[Depends(check_user_permissions)], response_model=GenericResponse)
+@router.post(
+    "/{internal_id}/add_stage",
+    dependencies=[Depends(check_user_permissions)],
+    response_model=GenericResponse,
+    deprecated=True,
+)
 async def add_stage_to_passport(internal_id: str, new_stage: ProductionStage) -> GenericResponse:
     try:
         await MongoDbWrapper().add_stage_to_passport(passport_id=internal_id, stage=new_stage)

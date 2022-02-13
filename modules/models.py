@@ -100,6 +100,8 @@ class ProductionStage(BaseModel):
     completed: tp.Optional[bool]
     number: tp.Optional[int]
 
+    unit_name: tp.Optional[str] = None
+
 
 class UnitStatus(str, enum.Enum):
     production = "production"
