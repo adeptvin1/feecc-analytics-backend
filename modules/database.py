@@ -132,6 +132,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         passport = await self.get_concrete_passport(uuid=uuid)
         if passport is None:
             raise ValueError(f"Can't find passport with uuid {uuid}")
+        logger.debug(f"{passport.internal_id} internal_id for passport with uuid {uuid}")
         return passport.internal_id
 
     async def get_components_internal_id(self, uuids: tp.Optional[tp.List[str]]) -> tp.List[str]:
@@ -265,7 +266,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         )
 
     async def get_stages(
-        self, internal_id: tp.Optional[str] = None, uuid: tp.Optional[str] = None
+        self, internal_id: tp.Optional[str] = None, uuid: tp.Optional[str] = None, is_subcomponent: bool = False
     ) -> tp.List[ProductionStage]:
         """retrieves all production stages"""
         stages: tp.List[ProductionStage]
@@ -279,9 +280,11 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             for stage in stages:
                 if not stage.parent_unit_uuid:
                     continue
-                stage.unit_name = await self.get_passport_name(
-                    await self.get_internal_id_by_uuid(stage.parent_unit_uuid)
-                )
+                if is_subcomponent:
+                    stage.parent_unit_internal_id = await self.get_internal_id_by_uuid(uuid=stage.parent_unit_uuid)
+                    stage.unit_name = await self.get_passport_name(
+                        await self.get_internal_id_by_uuid(uuid=stage.parent_unit_uuid)
+                    )
 
             return stages
         if internal_id:
@@ -292,9 +295,13 @@ class MongoDbWrapper(metaclass=SingletonMeta):
                 self._prod_stage_collection, model_=ProductionStage, filter={"parent_unit_uuid": passport.uuid}
             )
             for stage in stages:
-                stage.unit_name = await self.get_passport_name(
-                    await self.get_internal_id_by_uuid(stage.parent_unit_uuid)
-                )
+                if not stage.parent_unit_uuid:
+                    continue
+                if is_subcomponent:
+                    stage.parent_unit_internal_id = await self.get_internal_id_by_uuid(uuid=stage.parent_unit_uuid)
+                    stage.unit_name = await self.get_passport_name(
+                        await self.get_internal_id_by_uuid(uuid=stage.parent_unit_uuid)
+                    )
 
             return stages
 

@@ -115,7 +115,7 @@ async def get_passport_by_internal_id(internal_id: str) -> tp.Union[PassportOut,
         if passport.biography:
             if passport.components_internal_ids:
                 for int_id in passport.components_internal_ids:
-                    passport.biography += await MongoDbWrapper().get_stages(internal_id=int_id)
+                    passport.biography += await MongoDbWrapper().get_stages(internal_id=int_id, is_subcomponent=True)
     except Exception as exception_message:
         logger.error(f"Failed to get unit {internal_id}. Exception: {exception_message}")
         raise DatabaseException(error=exception_message)
