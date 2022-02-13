@@ -100,10 +100,7 @@ class ProductionStage(BaseModel):
     completed: tp.Optional[bool]
     number: tp.Optional[int]
 
-    unit_name: tp.Optional[str]
-    parent_unit_internal_id: tp.Optional[str]
-
-    async def clear(self) -> ProductionStage:
+    async def clear(self, number: int) -> ProductionStage:
         return ProductionStage(
             name=self.name,
             parent_unit_uuid=self.parent_unit_uuid,
@@ -113,7 +110,14 @@ class ProductionStage(BaseModel):
             session_start_time=None,
             session_end_time=None,
             completed=False,
+            number=number,
+            additional_info={},
         )
+
+
+class ProductionStageData(ProductionStage):
+    unit_name: tp.Optional[str]
+    parent_unit_internal_id: tp.Optional[str]
 
 
 class UnitStatus(str, enum.Enum):
@@ -132,7 +136,7 @@ class Passport(BaseModel):
     passport_ipfs_cid: tp.Optional[str] = None
     is_in_db: bool
     featured_in_int_id: tp.Optional[str]
-    biography: tp.Optional[tp.List[ProductionStage]]
+    biography: tp.Optional[tp.List[ProductionStageData]]
     components_internal_ids: tp.Optional[tp.List[str]]
     model: tp.Optional[str] = None
     date: datetime = Field(alias="creation_time")

@@ -6,7 +6,15 @@ from loguru import logger
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection, AsyncIOMotorCursor
 from pydantic import BaseModel
 
-from .models import Employee, Passport, ProductionSchema, ProductionStage, UnitStatus, UserWithPassword
+from .models import (
+    Employee,
+    Passport,
+    ProductionSchema,
+    ProductionStage,
+    ProductionStageData,
+    UnitStatus,
+    UserWithPassword,
+)
 from .singleton import SingletonMeta
 from .types import Filter
 
@@ -276,15 +284,15 @@ class MongoDbWrapper(metaclass=SingletonMeta):
 
     async def get_stages(
         self, internal_id: tp.Optional[str] = None, uuid: tp.Optional[str] = None, is_subcomponent: bool = False
-    ) -> tp.List[ProductionStage]:
+    ) -> tp.List[ProductionStageData]:
         """retrieves all production stages"""
-        stages: tp.List[ProductionStage]
+        stages: tp.List[ProductionStageData]
 
         if internal_id and uuid:
             raise ValueError("Stages search only available by uuid or internal_id")
         if uuid:
             stages = await self._get_all_from_collection(
-                self._prod_stage_collection, model_=ProductionStage, filter={"parent_unit_uuid": uuid}
+                self._prod_stage_collection, model_=ProductionStageData, filter={"parent_unit_uuid": uuid}
             )
             for stage in stages:
                 if not stage.parent_unit_uuid:
@@ -301,7 +309,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             if not passport:
                 return []
             stages = await self._get_all_from_collection(
-                self._prod_stage_collection, model_=ProductionStage, filter={"parent_unit_uuid": passport.uuid}
+                self._prod_stage_collection, model_=ProductionStageData, filter={"parent_unit_uuid": passport.uuid}
             )
             for stage in stages:
                 if not stage.parent_unit_uuid:
@@ -354,15 +362,15 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         )
         await self._add_document_to_collection(self._prod_stage_collection, stage)
 
-    async def add_stage_to_passport(self, passport_id: str, stage: ProductionStage) -> None:
-        """add production stage to concrete unit"""
-        passport = await self.get_concrete_passport(internal_id=passport_id)
-        if passport is None:
-            raise KeyError(f"Unit with id {passport_id} not found")
-        if passport.biography is None:
-            passport.biography = []
-        passport.biography.append(stage)
-        await self.edit_passport(internal_id=passport_id, new_passport_data=passport)
+    # async def add_stage_to_passport(self, passport_id: str, stage: ProductionStage) -> None:
+    #     """add production stage to concrete unit"""
+    #     passport = await self.get_concrete_passport(internal_id=passport_id)
+    #     if passport is None:
+    #         raise KeyError(f"Unit with id {passport_id} not found")
+    #     if passport.biography is None:
+    #         passport.biography = []
+    #     passport.biography.append(stage)
+    #     await self.edit_passport(internal_id=passport_id, new_passport_data=passport)
 
     async def add_user(self, user: UserWithPassword) -> None:
         """add user to database"""
@@ -477,4 +485,8 @@ class MongoDbWrapper(metaclass=SingletonMeta):
                     f"Can't send unit for revision. Stage {stage.id} not associated with passport {internal_id}"
                 )
 
-            await self.add_stage(await stage.clear())
+            stages = await self.get_stages(internal_id=internal_id)
+            if not stages:
+                raise ValueError(f"Can't send unit for revision. Passport {internal_id} have 0 stages")
+
+            await self.add_stage(await stage.clear(number=len(stages) + 1))

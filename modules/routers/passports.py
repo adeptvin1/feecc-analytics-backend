@@ -175,16 +175,16 @@ async def send_for_revision(internal_id: str, stages_ids: tp.List[str]) -> Gener
     return GenericResponse(detail="Successfully sent unit for revision")
 
 
-@router.post(
-    "/{internal_id}/add_stage",
-    dependencies=[Depends(check_user_permissions)],
-    response_model=GenericResponse,
-    deprecated=True,
-)
-async def add_stage_to_passport(internal_id: str, new_stage: ProductionStage) -> GenericResponse:
-    try:
-        await MongoDbWrapper().add_stage_to_passport(passport_id=internal_id, stage=new_stage)
-    except Exception as exception_message:
-        logger.error(f"Failed to add new production stage to unit {internal_id}. Exception: {exception_message}")
-        raise DatabaseException(error=exception_message)
-    return GenericResponse(detail="Successfully added stage to unit")
+# @router.post(
+#     "/{internal_id}/add_stage",
+#     dependencies=[Depends(check_user_permissions)],
+#     response_model=GenericResponse,
+#     deprecated=True,
+# )
+# async def add_stage_to_passport(internal_id: str, new_stage: ProductionStage) -> GenericResponse:
+#     try:
+#         await MongoDbWrapper().add_stage_to_passport(passport_id=internal_id, stage=new_stage)
+#     except Exception as exception_message:
+#         logger.error(f"Failed to add new production stage to unit {internal_id}. Exception: {exception_message}")
+#         raise DatabaseException(error=exception_message)
+#     return GenericResponse(detail="Successfully added stage to unit")
