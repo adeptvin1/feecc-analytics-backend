@@ -64,6 +64,7 @@ class ProductionSchemaStage(BaseModel):
     equipment: tp.Optional[tp.List[str]] = None
     workplace: tp.Optional[str] = None
     duration_seconds: tp.Optional[int] = None
+    stage_id: str
 
 
 class ProductionSchema(BaseModel):
@@ -73,7 +74,6 @@ class ProductionSchema(BaseModel):
     required_components_schema_ids: tp.Optional[tp.List[str]] = None
     parent_schema_id: tp.Optional[str] = None
     schema_type: str
-    stage_id: str
 
 
 class ProductionSchemasOut(GenericResponse):
