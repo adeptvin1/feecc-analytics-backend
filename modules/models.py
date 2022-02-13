@@ -114,6 +114,7 @@ class ProductionStage(BaseModel):
             completed=False,
             number=number,
             additional_info={},
+            schema_stage_id=self.schema_stage_id,
         )
 
 
