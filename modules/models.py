@@ -97,7 +97,7 @@ class ProductionStage(BaseModel):
     id: str = Field(default_factory=lambda: uuid4().hex)
     is_in_db: bool
     creation_time: datetime
-    schema_stage_id: str
+    schema_stage_id: tp.Optional[str]
 
     completed: tp.Optional[bool]
     number: tp.Optional[int]
