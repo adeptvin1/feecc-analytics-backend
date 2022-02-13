@@ -167,8 +167,8 @@ async def patch_passport(internal_id: str, new_data: Passport) -> GenericRespons
 async def send_for_revision(internal_id: str, stages_ids: tp.List[str]) -> GenericResponse:
     logger.info(f"Sending unit {internal_id} for revision")
     try:
-        await MongoDbWrapper().update_passport_status(internal_id=internal_id, status="revision")
         await MongoDbWrapper().send_unit_for_revision(internal_id=internal_id, stage_ids=stages_ids)
+        await MongoDbWrapper().update_passport_status(internal_id=internal_id, status="revision")
     except Exception as exception_message:
         logger.error(f"Failed to send unit {internal_id} for revision. Exception: {exception_message}")
         raise DatabaseException(error=exception_message)
