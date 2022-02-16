@@ -3,7 +3,7 @@ import typing as tp
 
 from pydantic import Field
 from ..types import Filter
-from ..models import UnitStatus
+from ..models import ProtocolStatus, UnitStatus
 
 
 async def parse_passports_filter(
@@ -44,3 +44,9 @@ async def parse_passports_filter(
         clear_filter["status"] = status
 
     return clear_filter
+
+
+async def parse_tcd_filters(
+    status: tp.Optional[ProtocolStatus] = None, name: tp.Optional[str] = None, type: tp.Optional[str] = None
+) -> Filter:
+    pass

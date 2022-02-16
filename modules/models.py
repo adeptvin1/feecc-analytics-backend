@@ -197,3 +197,8 @@ class TypesOut(GenericResponse):
 class OrderBy(str, enum.Enum):
     descending = "asc"
     ascending = "desc"
+
+
+class ProtocolStatus(str, enum.Enum):
+    approved = "approved"
+    finalized = "finalized"
