@@ -202,3 +202,25 @@ class OrderBy(str, enum.Enum):
 class ProtocolStatus(str, enum.Enum):
     approved = "approved"
     finalized = "finalized"
+
+
+class ProtocolRow(BaseModel):
+    name: str
+    value: str
+    deviation: tp.Optional[str] = None
+    test1: tp.Optional[str]
+    test2: tp.Optional[str]
+    checked: bool = False
+
+
+class Protocol(BaseModel):
+    protocol_name: str
+    protocol_id: str
+    rows: tp.List[ProtocolRow]
+
+
+class ProtocolOut(BaseModel):
+    serial_number: str
+    internal_id: str
+    stage: int
+    employee: Employee
