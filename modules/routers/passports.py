@@ -34,11 +34,11 @@ async def get_all_passports(
     logger.debug(f"Filter: {filters}, sorting by date {sort_by_date}")
     try:
         passports = await MongoDbWrapper().get_passports(filters)
+        documents_count = len(passports)
+
         if sort_by_date == "asc":
             passports.reverse()
         passports = passports[(page - 1) * items : page * items]
-
-        documents_count = len(passports)
 
         for passport in passports:
             logger.debug(f"passport date: {passport.date}")
