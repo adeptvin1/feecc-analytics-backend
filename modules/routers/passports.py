@@ -160,7 +160,7 @@ async def patch_passport(internal_id: str, new_data: Passport) -> GenericRespons
     return GenericResponse(detail="Successfully patched unit")
 
 
-@router.post("/{internal_id}/revision")
+@router.post("/{internal_id}/revision", response_model=GenericResponse)
 async def send_for_revision(internal_id: str, stages_ids: tp.List[str]) -> GenericResponse:
     logger.info(f"Sending unit {internal_id} for revision")
     try:
