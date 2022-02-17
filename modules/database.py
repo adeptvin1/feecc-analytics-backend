@@ -12,6 +12,7 @@ from .models import (
     ProductionSchema,
     ProductionStage,
     ProductionStageData,
+    Protocol,
     UserWithPassword,
 )
 from .singleton import SingletonMeta
@@ -44,6 +45,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         self._credentials_collection: AsyncIOMotorCollection = self._database["Analytics-credentials"]
         self._schemas_collection: AsyncIOMotorCollection = self._database["Production-schemas"]
         self._schemas_types_collection: AsyncIOMotorClient = self._database["Production-schemas-types"]
+        self._protocols_collection: AsyncIOMotorClient = self._database["Protocols"]
 
         logger.info("Connected to MongoDB")
 
@@ -195,6 +197,11 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         schema = await self._get_element_by_key(self._schemas_collection, key="schema_id", value=schema_id)
         return ProductionSchema(**schema)
 
+    async def get_concrete_protocol_prototype(self, protocol_id: str) -> Protocol:
+        """retrieves information about protocol prototype"""
+        protocol = await self._get_element_by_key(self._protocols_collection, key="protocol_id", value=protocol_id)
+        return Protocol(**protocol)
+
     async def get_passport_creation_date(self, uuid: str) -> tp.Optional[datetime.datetime]:
         try:
             return (
@@ -244,6 +251,10 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         # XXX: Field for testing purposes
         types.remove("Testing")
         return types
+
+    async def get_all_protocols(self) -> tp.List[Protocol]:
+        """retrieves all protocols"""
+        return await self._get_all_from_collection(self._protocols_collection)
 
     async def get_all_employees(self) -> tp.List[Employee]:
         """retrieves all employees"""
