@@ -206,7 +206,7 @@ class ProtocolStatus(str, enum.Enum):
     third = "Протокол утверждён"
 
     @tp.no_type_check
-    def switch(self) -> ProtocolStatus:
+    async def switch(self) -> ProtocolStatus:
         if self.value == self.first:
             return ProtocolStatus(self.second.value)
         elif self.value == self.second:
