@@ -55,7 +55,7 @@ async def parse_tcd_filters(
 
     if status:
         clear_filter["status"] = status
-    
+
     if name:
         clear_filter["name"] = name
 

@@ -500,9 +500,12 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         await self._update_document(self._unit_collection, {"internal_id": internal_id}, {"status": status})
 
     async def update_protocol(self, protocol_data: ProtocolData) -> None:
+        logger.debug(
+            f"Updating protocol {protocol_data.protocol_id} for unit {protocol_data.associated_unit_id}. Data: {protocol_data.dict()}"
+        )
         await self._update_document(
             self._protocols_data_collection,
-            filter={"protocol_id": protocol_data.protocol_id},
+            filter={"associated_unit_id": protocol_data.associated_unit_id},
             new_data=protocol_data.dict(),
         )
 
@@ -544,6 +547,6 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         if protocol.status == ProtocolStatus.finalized:
             raise DatabaseException(detail="Status already finalized")
 
-        protocol.status = ProtocolStatus.approved
+        protocol.status = ProtocolStatus.finalized
 
         await self.update_protocol(data)
