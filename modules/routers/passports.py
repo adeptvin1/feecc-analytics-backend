@@ -34,11 +34,11 @@ async def get_all_passports(
     logger.debug(f"Filter: {filters}, sorting by date {sort_by_date}")
     try:
         passports = await MongoDbWrapper().get_passports(filters)
+        documents_count = len(passports)
+
         if sort_by_date == "asc":
             passports.reverse()
         passports = passports[(page - 1) * items : page * items]
-
-        documents_count = len(passports)
 
         for passport in passports:
             logger.debug(f"passport date: {passport.date}")
@@ -160,7 +160,7 @@ async def patch_passport(internal_id: str, new_data: Passport) -> GenericRespons
     return GenericResponse(detail="Successfully patched unit")
 
 
-@router.post("/{internal_id}/revision")
+@router.post("/{internal_id}/revision", response_model=GenericResponse)
 async def send_for_revision(internal_id: str, stages_ids: tp.List[str]) -> GenericResponse:
     logger.info(f"Sending unit {internal_id} for revision")
     try:
@@ -170,18 +170,3 @@ async def send_for_revision(internal_id: str, stages_ids: tp.List[str]) -> Gener
         logger.error(f"Failed to send unit {internal_id} for revision. Exception: {exception_message}")
         raise DatabaseException(error=exception_message)
     return GenericResponse(detail="Successfully sent unit for revision")
-
-
-# @router.post(
-#     "/{internal_id}/add_stage",
-#     dependencies=[Depends(check_user_permissions)],
-#     response_model=GenericResponse,
-#     deprecated=True,
-# )
-# async def add_stage_to_passport(internal_id: str, new_stage: ProductionStage) -> GenericResponse:
-#     try:
-#         await MongoDbWrapper().add_stage_to_passport(passport_id=internal_id, stage=new_stage)
-#     except Exception as exception_message:
-#         logger.error(f"Failed to add new production stage to unit {internal_id}. Exception: {exception_message}")
-#         raise DatabaseException(error=exception_message)
-#     return GenericResponse(detail="Successfully added stage to unit")

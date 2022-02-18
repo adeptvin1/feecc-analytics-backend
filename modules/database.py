@@ -6,12 +6,17 @@ from loguru import logger
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection, AsyncIOMotorCursor
 from pydantic import BaseModel
 
+from modules.exceptions import DatabaseException
+
 from .models import (
     Employee,
     Passport,
     ProductionSchema,
     ProductionStage,
     ProductionStageData,
+    Protocol,
+    ProtocolData,
+    ProtocolStatus,
     UserWithPassword,
 )
 from .singleton import SingletonMeta
@@ -44,6 +49,8 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         self._credentials_collection: AsyncIOMotorCollection = self._database["Analytics-credentials"]
         self._schemas_collection: AsyncIOMotorCollection = self._database["Production-schemas"]
         self._schemas_types_collection: AsyncIOMotorClient = self._database["Production-schemas-types"]
+        self._protocols_collection: AsyncIOMotorClient = self._database["Protocols"]
+        self._protocols_data_collection: AsyncIOMotorClient = self._database["Protocols-data"]
 
         logger.info("Connected to MongoDB")
 
@@ -195,6 +202,24 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         schema = await self._get_element_by_key(self._schemas_collection, key="schema_id", value=schema_id)
         return ProductionSchema(**schema)
 
+    async def get_concrete_protocol_prototype(self, associated_with_schema_id: str) -> tp.Optional[Protocol]:
+        """retrieves information about protocol prototype"""
+        protocol = await self._get_element_by_key(
+            self._protocols_collection, key="associated_with_schema_id", value=associated_with_schema_id
+        )
+        if not protocol:
+            return None
+        return Protocol(**protocol)
+
+    async def get_concrete_protocol(self, internal_id: str) -> tp.Optional[ProtocolData]:
+        """retrieves information about protocol by int_id"""
+        protocol = await self._get_element_by_key(
+            self._protocols_data_collection, key="associated_unit_id", value=internal_id
+        )
+        if not protocol:
+            return None
+        return ProtocolData(**protocol)
+
     async def get_passport_creation_date(self, uuid: str) -> tp.Optional[datetime.datetime]:
         try:
             return (
@@ -244,6 +269,14 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         # XXX: Field for testing purposes
         types.remove("Testing")
         return types
+
+    async def get_all_protocol_prototypes(self) -> tp.List[Protocol]:
+        """retrieves all protocol prototypes"""
+        return await self._get_all_from_collection(self._protocols_collection, model_=Protocol)
+
+    async def get_all_protocols(self, filter: Filter = {}) -> tp.List[Protocol]:
+        """retrieves all protocols"""
+        return await self._get_all_from_collection(self._protocols_data_collection, model_=ProtocolData, filter=filter)
 
     async def get_all_employees(self) -> tp.List[Employee]:
         """retrieves all employees"""
@@ -379,6 +412,10 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         """add production schema to database"""
         await self._add_document_to_collection(self._schemas_collection, schema)
 
+    async def add_protocol(self, protocol: ProtocolData) -> None:
+        """add protocol to database"""
+        await self._add_document_to_collection(self._protocols_data_collection, protocol)
+
     async def remove_employee(self, rfid_card_id: str) -> None:
         """remove employee from database"""
         await self._remove_document_from_collection(self._employee_collection, key="rfid_card_id", value=rfid_card_id)
@@ -462,6 +499,16 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             return None
         await self._update_document(self._unit_collection, {"internal_id": internal_id}, {"status": status})
 
+    async def update_protocol(self, protocol_data: ProtocolData) -> None:
+        logger.debug(
+            f"Updating protocol {protocol_data.protocol_id} for unit {protocol_data.associated_unit_id}. Data: {protocol_data.dict()}"
+        )
+        await self._update_document(
+            self._protocols_data_collection,
+            filter={"associated_unit_id": protocol_data.associated_unit_id},
+            new_data=protocol_data.dict(),
+        )
+
     async def send_unit_for_revision(self, internal_id: str, stage_ids: tp.List[str]) -> None:
         passport = await self.get_concrete_passport(internal_id=internal_id)
         if not passport:
@@ -489,3 +536,18 @@ class MongoDbWrapper(metaclass=SingletonMeta):
                 raise ValueError(f"Can't send unit for revision. Passport {internal_id} have 0 stages")
 
             await self.add_stage(await stage.clear(number=len(stages)))
+
+    async def approve_protocol(self, internal_id: str, data: ProtocolData) -> None:
+        protocol = await self.get_concrete_protocol(internal_id=internal_id)
+
+        if not protocol:
+            await self.add_protocol(data)
+            return
+
+        if protocol.status == ProtocolStatus.third:
+            logger.warning(f"Protocol was already finalized. Unit {internal_id}, protocol {data.protocol_id}")
+
+        protocol.rows = data.rows
+        protocol.status = await protocol.status.switch()
+
+        await self.update_protocol(protocol)
