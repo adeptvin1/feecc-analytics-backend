@@ -200,9 +200,9 @@ class OrderBy(str, enum.Enum):
 
 
 class ProtocolStatus(str, enum.Enum):
-    first = "Первая стадия испытаний"
-    second = "Вторая стадия испытаний"
-    third = "Утверждено"
+    first = "Первая стадия испытаний пройдена"
+    second = "Вторая стадия испытаний пройдена"
+    third = "Протокол утверждён"
 
     async def switch(self) -> ProtocolStatus:
         if self.value == self.first:
