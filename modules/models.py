@@ -132,7 +132,7 @@ class UnitStatus(str, enum.Enum):
 
 
 class Passport(BaseModel):
-    schema_id: tp.Optional[str] = None
+    schema_id: str
     uuid: str = Field(default_factory=lambda: uuid4().hex)
     internal_id: str
     passport_short_url: tp.Optional[str]
@@ -223,10 +223,14 @@ class Protocol(BaseModel):
 class ProtocolData(Protocol):
     protocol_id: str = Field(default_factory=lambda: uuid4().hex)
     associated_unit_id: str
+    status: ProtocolStatus = ProtocolStatus.approved
 
 
-class ProtocolOut(BaseModel):
-    serial_number: str
-    internal_id: str
-    stage: int
-    employee: Employee
+class ProtocolOut(GenericResponse):
+    serial_number: tp.Optional[str]
+    employee: tp.Optional[Employee]
+    protocol: tp.Union[ProtocolData, Protocol]
+
+
+class ProtocolsOut(GenericResponse):
+    data: tp.List[ProtocolData]
