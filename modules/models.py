@@ -224,7 +224,7 @@ class ProtocolData(Protocol):
     protocol_id: str = Field(default_factory=lambda: uuid4().hex)
     associated_unit_id: str
     status: ProtocolStatus = ProtocolStatus.approved
-    creation_time: datetime = Field(default_factory=datetime.now())
+    creation_time: datetime = Field(default_factory=datetime.now)
 
 
 class ProtocolOut(GenericResponse):
