@@ -20,7 +20,7 @@ router = APIRouter(dependencies=[Depends(get_current_user)])
 @router.get("/protocols", response_model=ProtocolsOut)
 async def get_protocols(filter: Filter = Depends(parse_tcd_filters)) -> ProtocolsOut:
     try:
-        protocols = await MongoDbWrapper().get_all_protocols()
+        protocols = await MongoDbWrapper().get_all_protocols(filter=filter)
     except Exception as exception_message:
         logger.warning(f"Can't get all protocols from DB. Filter: {filter}")
         raise DatabaseException(error=exception_message)
@@ -47,6 +47,10 @@ async def get_concrete_protocol(internal_id: str, employee: Employee = Depends(g
 @router.post("/protocols/{internal_id}")
 async def process_protocol(protocol: ProtocolData = Depends(handle_protocol)) -> GenericResponse:
     try:
-        pass
-    except Exception:
-        pass
+        await MongoDbWrapper().approve_protocol(internal_id=protocol.associated_unit_id, data=protocol)
+    except Exception as exception_message:
+        logger.error(f"Can't process protocol for unit {protocol.associated_unit_id}. Exception: {exception_message}")
+        logger.debug(f"Protocol: {protocol}")
+        raise DatabaseException(detail=exception_message)
+
+    return GenericResponse()

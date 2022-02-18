@@ -6,6 +6,8 @@ from loguru import logger
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection, AsyncIOMotorCursor
 from pydantic import BaseModel
 
+from modules.exceptions import DatabaseException
+
 from .models import (
     Employee,
     Passport,
@@ -537,10 +539,11 @@ class MongoDbWrapper(metaclass=SingletonMeta):
 
         if not protocol:
             await self.add_protocol(data)
-            protocol = data
+            return
 
-        protocol.status = (
-            ProtocolStatus.finalized if protocol.status != ProtocolStatus.approved else ProtocolStatus.approved
-        )
+        if protocol.status == ProtocolStatus.finalized:
+            raise DatabaseException(detail="Status already finalized")
+
+        protocol.status = ProtocolStatus.approved
 
         await self.update_protocol(data)
