@@ -547,6 +547,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         if protocol.status == ProtocolStatus.third:
             logger.warning(f"Protocol was already finalized. Unit {internal_id}, protocol {data.protocol_id}")
 
+        protocol.rows = data.rows
         protocol.status = await protocol.status.switch()
 
-        await self.update_protocol(data)
+        await self.update_protocol(protocol)
