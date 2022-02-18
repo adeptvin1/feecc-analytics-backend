@@ -8,10 +8,19 @@ from ..dependencies.handlers import handle_protocol
 
 from ..database import MongoDbWrapper
 from ..exceptions import DatabaseException
-from ..models import Employee, GenericResponse, Protocol, ProtocolData, ProtocolOut, ProtocolsOut
+from ..models import (
+    Employee,
+    GenericResponse,
+    Protocol,
+    ProtocolData,
+    ProtocolOut,
+    ProtocolsOut,
+    TypesOut,
+    ProtocolStatus,
+)
 from ..types import Filter
 from ..dependencies.filters import parse_tcd_filters
-from ..dependencies.security import check_user_permissions, get_current_employee, get_current_user
+from ..dependencies.security import get_current_employee, get_current_user
 
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
@@ -25,6 +34,11 @@ async def get_protocols(filter: Filter = Depends(parse_tcd_filters)) -> Protocol
         logger.warning(f"Can't get all protocols from DB. Filter: {filter}")
         raise DatabaseException(error=exception_message)
     return ProtocolsOut(data=protocols)
+
+
+@router.get("/protocols/types")
+async def get_protocols_types() -> TypesOut:
+    return TypesOut(data=["approved", "finalized"])
 
 
 @router.get("/protocols/{internal_id}")

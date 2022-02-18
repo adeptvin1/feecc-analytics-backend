@@ -47,6 +47,20 @@ async def parse_passports_filter(
 
 
 async def parse_tcd_filters(
-    status: tp.Optional[ProtocolStatus] = None, name: tp.Optional[str] = None, type: tp.Optional[str] = None
+    status: tp.Optional[ProtocolStatus] = None,
+    name: tp.Optional[str] = None,
+    date: tp.Optional[datetime.datetime] = None,
 ) -> Filter:
-    pass
+    clear_filter: Filter = {}
+
+    if status:
+        clear_filter["status"] = status
+    
+    if name:
+        clear_filter["name"] = name
+
+    if date is not None:
+        start, end = date.replace(hour=0, minute=0, second=0), date.replace(hour=23, minute=59, second=59)
+        clear_filter["creation_time"] = {"$lt": end, "$gte": start}
+
+    return clear_filter
