@@ -215,8 +215,14 @@ class ProtocolRow(BaseModel):
 
 class Protocol(BaseModel):
     protocol_name: str
-    protocol_id: str
+    protocol_schema_id: str
+    associated_with_schema_id: str
     rows: tp.List[ProtocolRow]
+
+
+class ProtocolData(Protocol):
+    protocol_id: str = Field(default_factory=lambda: uuid4().hex)
+    associated_unit_id: str
 
 
 class ProtocolOut(BaseModel):

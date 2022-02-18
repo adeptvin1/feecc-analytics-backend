@@ -13,6 +13,7 @@ from .models import (
     ProductionStage,
     ProductionStageData,
     Protocol,
+    ProtocolData,
     UserWithPassword,
 )
 from .singleton import SingletonMeta
@@ -46,6 +47,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         self._schemas_collection: AsyncIOMotorCollection = self._database["Production-schemas"]
         self._schemas_types_collection: AsyncIOMotorClient = self._database["Production-schemas-types"]
         self._protocols_collection: AsyncIOMotorClient = self._database["Protocols"]
+        self._protocols_data_collection: AsyncIOMotorClient = self._database["Protocols-data"]
 
         logger.info("Connected to MongoDB")
 
@@ -197,10 +199,17 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         schema = await self._get_element_by_key(self._schemas_collection, key="schema_id", value=schema_id)
         return ProductionSchema(**schema)
 
-    async def get_concrete_protocol_prototype(self, protocol_id: str) -> Protocol:
+    async def get_concrete_protocol_prototype(self, protocol_schema_id: str) -> Protocol:
         """retrieves information about protocol prototype"""
-        protocol = await self._get_element_by_key(self._protocols_collection, key="protocol_id", value=protocol_id)
+        protocol = await self._get_element_by_key(
+            self._protocols_collection, key="protocol_schema_id", value=protocol_schema_id
+        )
         return Protocol(**protocol)
+
+    async def get_concrete_protocol(self, protocol_id: str) -> ProtocolData:
+        """retrieves information about protocol"""
+        protocol = await self._get_element_by_key(self._protocols_data_collection, key="protocol_id", value=protocol_id)
+        return ProtocolData(**protocol)
 
     async def get_passport_creation_date(self, uuid: str) -> tp.Optional[datetime.datetime]:
         try:
@@ -252,9 +261,13 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         types.remove("Testing")
         return types
 
+    async def get_all_protocol_prototypes(self) -> tp.List[Protocol]:
+        """retrieves all protocol prototypes"""
+        return await self._get_all_from_collection(self._protocols_collection, model_=Protocol)
+
     async def get_all_protocols(self) -> tp.List[Protocol]:
         """retrieves all protocols"""
-        return await self._get_all_from_collection(self._protocols_collection)
+        return await self._get_all_from_collection(self._protocols_data_collection, model_=ProtocolData)
 
     async def get_all_employees(self) -> tp.List[Employee]:
         """retrieves all employees"""
@@ -389,6 +402,10 @@ class MongoDbWrapper(metaclass=SingletonMeta):
     async def add_schema(self, schema: ProductionSchema) -> None:
         """add production schema to database"""
         await self._add_document_to_collection(self._schemas_collection, schema)
+
+    async def add_protocol(self, protocol: ProtocolData) -> None:
+        """add protocol to database"""
+        await self._add_document_to_collection(self._protocols_data_collection, protocol)
 
     async def remove_employee(self, rfid_card_id: str) -> None:
         """remove employee from database"""
