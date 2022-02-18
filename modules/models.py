@@ -5,6 +5,7 @@ import hashlib
 import typing as tp
 from datetime import datetime
 from uuid import uuid4
+from loguru import logger
 
 from pydantic import BaseModel, Field
 
@@ -204,13 +205,15 @@ class ProtocolStatus(str, enum.Enum):
     second = "Вторая стадия испытаний пройдена"
     third = "Протокол утверждён"
 
-    async def switch(self) -> ProtocolStatus:
+    @tp.no_type_check
+    def switch(self) -> ProtocolStatus:
         if self.value == self.first:
-            return ProtocolStatus("Вторая стадия испытаний")
+            return ProtocolStatus(self.second.value)
         elif self.value == self.second:
-            return ProtocolStatus("Утверждено")
+            return ProtocolStatus(self.third.value)
         else:
-            return ProtocolStatus("Утверждено")
+            logger.warning("Switching from last possible status")
+            return ProtocolStatus(self.third.value)
 
 
 class ProtocolRow(BaseModel):
