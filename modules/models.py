@@ -199,7 +199,7 @@ class OrderBy(str, enum.Enum):
     ascending = "desc"
 
 
-class ProtocolStatus(enum.Enum):
+class ProtocolStatus(str, enum.Enum):
     first = "Первая стадия испытаний"
     second = "Вторая стадия испытаний"
     third = "Утверждено"
