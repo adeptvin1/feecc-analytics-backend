@@ -199,9 +199,18 @@ class OrderBy(str, enum.Enum):
     ascending = "desc"
 
 
-class ProtocolStatus(str, enum.Enum):
-    approved = "approved"
-    finalized = "finalized"
+class ProtocolStatus(enum.Enum):
+    first = "Первая стадия испытаний"
+    second = "Вторая стадия испытаний"
+    third = "Утверждено"
+
+    async def switch(self) -> ProtocolStatus:
+        if self.value == self.first:
+            return ProtocolStatus("Вторая стадия испытаний")
+        elif self.value == self.second:
+            return ProtocolStatus("Утверждено")
+        else:
+            return ProtocolStatus("Утверждено")
 
 
 class ProtocolRow(BaseModel):
@@ -223,7 +232,7 @@ class Protocol(BaseModel):
 class ProtocolData(Protocol):
     protocol_id: str = Field(default_factory=lambda: uuid4().hex)
     associated_unit_id: str
-    status: ProtocolStatus = ProtocolStatus.approved
+    status: ProtocolStatus = ProtocolStatus.first
     creation_time: datetime = Field(default_factory=datetime.now)
 
 

@@ -38,7 +38,7 @@ async def get_protocols(filter: Filter = Depends(parse_tcd_filters)) -> Protocol
 
 @router.get("/protocols/types")
 async def get_protocols_types() -> TypesOut:
-    return TypesOut(data=["approved", "finalized"])
+    return TypesOut(data=["Первая стадия испытаний", "Вторая стадия испытаний", "Утверждено"])
 
 
 @router.get("/protocols/{internal_id}")
