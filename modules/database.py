@@ -494,8 +494,8 @@ class MongoDbWrapper(metaclass=SingletonMeta):
     async def update_passport_status(self, internal_id: str, status: str) -> None:
         """update concrete passport status"""
         current_status = await self.get_passport_status(internal_id=internal_id)
+        logger.warning(f"Trying to change status from {current_status} to {status}")
         if status == current_status:
-            logger.warning(f"Trying to change status from {current_status} to {status}")
             return None
         await self._update_document(self._unit_collection, {"internal_id": internal_id}, {"status": status})
 
@@ -544,10 +544,13 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             await self.add_protocol(data)
             return
 
-        if protocol.status == ProtocolStatus.third:
+        if protocol.status == "Протокол утверждён":
             logger.warning(f"Protocol was already finalized. Unit {internal_id}, protocol {data.protocol_id}")
 
         protocol.rows = data.rows
         protocol.status = await protocol.status.switch()
 
         await self.update_protocol(protocol)
+
+        if protocol.status == "Вторая стадия испытаний пройдена":
+            await self.update_passport_status(internal_id=internal_id, status="approved")
