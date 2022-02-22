@@ -229,6 +229,7 @@ class Protocol(BaseModel):
     protocol_name: str
     protocol_schema_id: str
     associated_with_schema_id: str
+    default_serial_number: tp.Optional[str]
     rows: tp.List[ProtocolRow]
 
 
