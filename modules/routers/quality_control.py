@@ -52,6 +52,8 @@ async def get_concrete_protocol(internal_id: str, employee: Employee = Depends(g
             raise DatabaseException(detail=f"Unit with {internal_id} not found. Can't generate protocol for it")
         if not protocol:
             protocol = await MongoDbWrapper().get_concrete_protocol_prototype(associated_with_schema_id=unit.schema_id)
+        if not protocol:
+            raise DatabaseException(detail="Can't create protocol for unit {internal_id}, missing schema")
     except Exception as exception_message:
         logger.warning(f"Can't get protocol for unit {internal_id}, exc: {exception_message}")
         raise DatabaseException(detail=exception_message)
