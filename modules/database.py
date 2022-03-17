@@ -6,7 +6,7 @@ from loguru import logger
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection, AsyncIOMotorCursor
 from pydantic import BaseModel
 
-from modules.exceptions import DatabaseException
+from modules.cacher import RedisCacher
 
 from .models import (
     Employee,
@@ -16,7 +16,6 @@ from .models import (
     ProductionStageData,
     Protocol,
     ProtocolData,
-    ProtocolStatus,
     UserWithPassword,
 )
 from .singleton import SingletonMeta
@@ -54,7 +53,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
 
         logger.info("Connected to MongoDB")
 
-        self._decoded_employees: tp.Dict[str, tp.Optional[Employee]] = {}
+        self._cacher: RedisCacher = RedisCacher()
 
     @staticmethod
     async def _remove_ids(cursor: AsyncIOMotorCursor) -> tp.List[tp.Dict[str, tp.Any]]:
@@ -130,15 +129,17 @@ class MongoDbWrapper(metaclass=SingletonMeta):
 
     async def decode_employee(self, hashed_employee: str) -> tp.Optional[Employee]:
         """Find an employee by hashed data"""
-        employee = self._decoded_employees.get(hashed_employee, None)
+        employee = self._cacher.get_employee(hashed_employee)
         if employee is not None:
             return employee
+
         employees = await self.get_all_employees()
-        for employee in employees:
-            encoded_employee = await employee.encode_sha256()
-            if encoded_employee == hashed_employee:
-                self._decoded_employees[hashed_employee] = employee
-                return employee
+        self._cacher.cache_employees(employees)
+        
+        employee = self._cacher.get_employee(hashed_employee)
+        if employee is not None:
+            return employee
+
         return None
 
     async def get_internal_id_by_uuid(self, uuid: str) -> str:
@@ -393,16 +394,6 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             f'Added stage {stage.dict(exclude={"completed", "number", "unit_name", "parent_unit_internal_id", "video_hashes", "additional_info"})}'
         )
         await self._add_document_to_collection(self._prod_stage_collection, stage)
-
-    # async def add_stage_to_passport(self, passport_id: str, stage: ProductionStage) -> None:
-    #     """add production stage to concrete unit"""
-    #     passport = await self.get_concrete_passport(internal_id=passport_id)
-    #     if passport is None:
-    #         raise KeyError(f"Unit with id {passport_id} not found")
-    #     if passport.biography is None:
-    #         passport.biography = []
-    #     passport.biography.append(stage)
-    #     await self.edit_passport(internal_id=passport_id, new_passport_data=passport)
 
     async def add_user(self, user: UserWithPassword) -> None:
         """add user to database"""
