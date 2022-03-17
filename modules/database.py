@@ -129,14 +129,14 @@ class MongoDbWrapper(metaclass=SingletonMeta):
 
     async def decode_employee(self, hashed_employee: str) -> tp.Optional[Employee]:
         """Find an employee by hashed data"""
-        employee = self._cacher.get_employee(hashed_employee)
+        employee = await self._cacher.get_employee(hashed_employee)
         if employee is not None:
             return employee
 
         employees = await self.get_all_employees()
-        self._cacher.cache_employees(employees)
-        
-        employee = self._cacher.get_employee(hashed_employee)
+        await self._cacher.cache_employees(employees)
+
+        employee = await self._cacher.get_employee(hashed_employee)
         if employee is not None:
             return employee
 

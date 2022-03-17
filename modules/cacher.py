@@ -13,31 +13,37 @@ from .singleton import SingletonMeta
 
 class RedisCacher(metaclass=SingletonMeta):
     @logger.catch(reraise=True)
-    async def __init__(self) -> None:
+    def __init__(self) -> None:
         REDIS_HOST = os.environ.get("REDIS_HOST")
+        if not REDIS_HOST:
+            raise ConnectionError("REDIS_HOST not specified")
 
         self._client = redis.Redis(host=REDIS_HOST, socket_connect_timeout=3)
 
     async def _is_in_cache(self, query: tp.Tuple[str, str]) -> bool:
         """Check if query is available in cache"""
-        return self._client.exists(str(query))
+        return bool(self._client.exists(str(query)))
 
-    async def _cache_to_redis(self, query: tp.Tuple[str, str], data: BaseModel) -> None:
+    async def _cache_to_redis(self, query: tp.Tuple[str, str], data: tp.Type[BaseModel]) -> None:
         """Save employee data to redis"""
         ttl = 1000 ** 2
         self._client.set(
             name=str(query),
-            value=repr([entry.dict() for entry in data]),
+            value=repr(data.dict()),
             exat=int(time.time()) + ttl,
         )
         logger.debug(f"Cached to redis. Set to expire after {ttl // 60}m.")
 
     async def _unpack_from_redis(
         self, query: tp.Tuple[str, str], model: tp.Type[BaseModel]
-    ) -> tp.List[tp.Type[BaseModel]]:
+    ) -> tp.Optional[tp.Type[BaseModel]]:
         """Het data to redis"""
-        data = eval(self._client.get(name=str(query)))
-        return [parse_obj_as(model, entry) for entry in data]
+        cached_data = self._client.get(name=str(query))
+        if not cached_data:
+            return None
+        data = eval(cached_data)
+        logger.debug(f"Unpacked employee {data} from cache")
+        return parse_obj_as(model, data)
 
     async def cache_employees(self, employees: tp.Iterable[Employee]) -> None:
         for employee in employees:
@@ -48,6 +54,6 @@ class RedisCacher(metaclass=SingletonMeta):
     async def get_employee(self, hashed_employee: str) -> tp.Optional[Employee]:
         query = ("employees", hashed_employee)
 
-        if self._is_in_cache(query=query):
-            return self._unpack_from_redis(query=query)
+        if await self._is_in_cache(query=query):
+            return await self._unpack_from_redis(query=query, model=Employee)
         return None
