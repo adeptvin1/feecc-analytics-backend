@@ -144,7 +144,7 @@ class Passport(BaseModel):
     components_internal_ids: tp.Optional[tp.List[str]]
     model: tp.Optional[str] = None
     date: datetime = Field(alias="creation_time")
-    type: tp.Optional[str] = None
+    type: str
     parential_unit: tp.Optional[str] = None
     serial_number: tp.Optional[str] = None
     status: tp.Optional[UnitStatus] = None

@@ -41,19 +41,13 @@ async def get_all_passports(
         passports = passports[(page - 1) * items : page * items]
 
         for passport in passports:
-            logger.debug(f"passport date: {passport.date}")
-            if not passport:
-                continue
-            passport.biography = await MongoDbWrapper().get_stages(uuid=passport.uuid)
-            if passport.schema_id:
-                schema = await MongoDbWrapper().get_concrete_schema(schema_id=passport.schema_id)
-                passport.type = await MongoDbWrapper().get_passport_type(schema_id=passport.schema_id)
-                if schema:
-                    passport.model = schema.unit_name or passport.model
-                    if schema.parent_schema_id:
-                        passport.parential_unit = (
-                            await MongoDbWrapper().get_concrete_schema(schema_id=schema.parent_schema_id)
-                        ).unit_name
+            schema = await MongoDbWrapper().get_concrete_schema(schema_id=passport.schema_id)
+            passport.type = await MongoDbWrapper().get_passport_type(schema_id=passport.schema_id)
+            passport.model = schema.unit_name or passport.model
+            if schema.parent_schema_id:
+                passport.parential_unit = (
+                    await MongoDbWrapper().get_concrete_schema(schema_id=schema.parent_schema_id)
+                ).unit_name
     except Exception as exception_message:
         logger.error(
             f"Failed to get units from page {page} (count: {items}, filter: {filters}). Exception: {exception_message}"
@@ -108,20 +102,20 @@ async def get_passport_by_internal_id(internal_id: str) -> tp.Union[PassportOut,
         if passport is None:
             logger.error(f"Unknown unit {internal_id}")
             return GenericResponse(status_code=404, detail="Not found")
-        if passport.schema_id:
-            schema = await MongoDbWrapper().get_concrete_schema(schema_id=passport.schema_id)
-            if schema:
-                passport.model = schema.unit_name or passport.model
-                passport.type = await MongoDbWrapper().get_passport_type(schema_id=passport.schema_id)
-                if schema.parent_schema_id:
-                    passport.parential_unit = (
-                        await MongoDbWrapper().get_concrete_schema(schema_id=schema.parent_schema_id)
-                    ).unit_name
+
+        schema = await MongoDbWrapper().get_concrete_schema(schema_id=passport.schema_id)
+        passport.model = schema.unit_name or passport.model
+        passport.type = await MongoDbWrapper().get_passport_type(schema_id=passport.schema_id)
+        if schema.parent_schema_id:
+            parential_unit = await MongoDbWrapper().get_concrete_schema(schema_id=schema.parent_schema_id)
+            passport.parential_unit = parential_unit.unit_name
+
         passport.biography = await MongoDbWrapper().get_stages(uuid=passport.uuid)
         if passport.biography:
             if passport.components_internal_ids:
                 for int_id in passport.components_internal_ids:
                     passport.biography += await MongoDbWrapper().get_stages(internal_id=int_id, is_subcomponent=True)
+
     except Exception as exception_message:
         logger.error(f"Failed to get unit {internal_id}. Exception: {exception_message}")
         raise DatabaseException(error=exception_message)

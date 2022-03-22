@@ -229,14 +229,14 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         except Exception:
             return None
 
-    async def get_passport_type(self, schema_id: str) -> tp.Optional[str]:
+    async def get_passport_type(self, schema_id: str) -> str:
         logger.debug("Using deprecated method get_passport_type, now Unit have field type. Use it instead.")
         try:
             return (
                 await self._get_element_by_key(self._schemas_types_collection, key="schema_id", value=schema_id)
             ).get("schema_type", None)
         except Exception:
-            return None
+            return "Unknown"
 
     async def get_passport_serial_number(self, internal_id: str) -> tp.Optional[str]:
         passport = await self.get_concrete_passport(internal_id=internal_id)
