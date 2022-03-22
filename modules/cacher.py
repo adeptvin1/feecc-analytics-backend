@@ -24,7 +24,7 @@ class RedisCacher(metaclass=SingletonMeta):
         """Check if query is available in cache"""
         return bool(self._client.exists(str(query)))
 
-    async def _cache_to_redis(self, query: tp.Tuple[str, str], data: tp.Type[BaseModel]) -> None:
+    async def _cache_to_redis(self, query: tp.Tuple[str, str], data: BaseModel) -> None:
         """Save employee data to redis"""
         ttl = 1000 ** 2
         self._client.set(
@@ -34,9 +34,7 @@ class RedisCacher(metaclass=SingletonMeta):
         )
         logger.debug(f"Cached to redis. Set to expire after {ttl // 60}m.")
 
-    async def _unpack_from_redis(
-        self, query: tp.Tuple[str, str], model: tp.Type[BaseModel]
-    ) -> tp.Optional[tp.Type[BaseModel]]:
+    async def _unpack_from_redis(self, query: tp.Tuple[str, str], model: tp.Type[BaseModel]) -> tp.Optional[BaseModel]:
         """Het data to redis"""
         cached_data = self._client.get(name=str(query))
         if not cached_data:
@@ -55,5 +53,6 @@ class RedisCacher(metaclass=SingletonMeta):
         query = ("employees", hashed_employee)
 
         if await self._is_in_cache(query=query):
-            return await self._unpack_from_redis(query=query, model=Employee)
+            employee = await self._unpack_from_redis(query=query, model=Employee)
+            return employee  # type:ignore
         return None
