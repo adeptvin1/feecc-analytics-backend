@@ -19,6 +19,10 @@ router = APIRouter(dependencies=[Depends(get_current_user)])
 
 @router.get("/protocols", response_model=ProtocolsOut)
 async def get_protocols(filter: Filter = Depends(parse_tcd_filters)) -> ProtocolsOut:
+    """
+    Endpoint to get all issued protocols from database.
+    You can't receive empty protocol templates here
+    """
     try:
         protocols = await MongoDbWrapper().get_all_protocols(filter=filter)
     except Exception as exception_message:
@@ -29,12 +33,18 @@ async def get_protocols(filter: Filter = Depends(parse_tcd_filters)) -> Protocol
 
 @router.get("/protocols/types")
 async def get_protocols_types() -> TypesOut:
-    return TypesOut(data=["Первая стадия испытаний пройдена", "Вторая стадия испытаний пройдена", "Протокол утверждён"])
+    """Endpoint to get all possible protocol stages (types)"""
+    types = ["Первая стадия испытаний пройдена", "Вторая стадия испытаний пройдена", "Протокол утверждён"]
+    return TypesOut(data=types)
 
 
 @router.get("/protocols/{internal_id}")
 async def get_concrete_protocol(internal_id: str, employee: Employee = Depends(get_current_employee)) -> ProtocolOut:
-    """protocol prototype or protocol data if in DB"""
+    """
+    Endpoint to get information about concrete protocol.
+    If unit don't have issued passport, it'll return empty protocol template.
+    Otherwise, you'll get filled protocol from database.
+    """
     protocol: tp.Union[Protocol, ProtocolData, None]
     try:
         protocol = await MongoDbWrapper().get_concrete_protocol(internal_id=internal_id)
@@ -53,6 +63,11 @@ async def get_concrete_protocol(internal_id: str, employee: Employee = Depends(g
 
 @router.post("/protocols/{internal_id}")
 async def handle_protocol_update(protocol: ProtocolData = Depends(handle_protocol)) -> GenericResponse:
+    """
+    Endpoint to handle protocol events. If unit don't have issued protocol, it'll be created
+    Otherwise, it'll be edited. Be careful, you can't edit immutable (approved) protocol,
+    you need to delete it first.
+    """
     try:
         await MongoDbWrapper().process_protocol(internal_id=protocol.associated_unit_id, data=protocol)
     except Exception as exception_message:
@@ -65,6 +80,7 @@ async def handle_protocol_update(protocol: ProtocolData = Depends(handle_protoco
 
 @router.post("/protocols/{internal_id}/approve", response_model=GenericResponse)
 async def approve_protocol(internal_id: str) -> GenericResponse:
+    """Endpoint to approve protocol (if unit already passed any checks)"""
     try:
         await MongoDbWrapper().approve_protocol(internal_id=internal_id)
     except Exception as exception_message:
@@ -76,10 +92,11 @@ async def approve_protocol(internal_id: str) -> GenericResponse:
 
 @router.delete("/protocols/{internal_id}", response_model=GenericResponse)
 async def remove_protocol(internal_id: str) -> GenericResponse:
+    """Endpoint to remove existing protocol information"""
     try:
         await MongoDbWrapper().remove_protocol(internal_id=internal_id)
     except Exception as exception_message:
-        logger.error(f"Can't approve protocol for unit {internal_id}. Exception: {exception_message}")
+        logger.error(f"Can't remove protocol for unit {internal_id}. Exception: {exception_message}")
         raise DatabaseException(detail=exception_message)
 
     return GenericResponse()
