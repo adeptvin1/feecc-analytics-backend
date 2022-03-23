@@ -8,16 +8,7 @@ from ..dependencies.handlers import handle_protocol
 
 from ..database import MongoDbWrapper
 from ..exceptions import DatabaseException
-from ..models import (
-    Employee,
-    GenericResponse,
-    Protocol,
-    ProtocolData,
-    ProtocolOut,
-    ProtocolsOut,
-    TypesOut,
-    ProtocolStatus,
-)
+from ..models import Employee, GenericResponse, Protocol, ProtocolData, ProtocolOut, ProtocolsOut, TypesOut
 from ..types import Filter
 from ..dependencies.filters import parse_tcd_filters
 from ..dependencies.security import get_current_employee, get_current_user
@@ -61,12 +52,23 @@ async def get_concrete_protocol(internal_id: str, employee: Employee = Depends(g
 
 
 @router.post("/protocols/{internal_id}")
-async def process_protocol(protocol: ProtocolData = Depends(handle_protocol)) -> GenericResponse:
+async def handle_protocol_update(protocol: ProtocolData = Depends(handle_protocol)) -> GenericResponse:
     try:
-        await MongoDbWrapper().approve_protocol(internal_id=protocol.associated_unit_id, data=protocol)
+        await MongoDbWrapper().process_protocol(internal_id=protocol.associated_unit_id, data=protocol)
     except Exception as exception_message:
         logger.error(f"Can't process protocol for unit {protocol.associated_unit_id}. Exception: {exception_message}")
         logger.debug(f"Protocol: {protocol}")
+        raise DatabaseException(detail=exception_message)
+
+    return GenericResponse()
+
+
+@router.post("/{internal_id}/approve", response_model=GenericResponse)
+async def approve_protocol(internal_id: str) -> GenericResponse:
+    try:
+        await MongoDbWrapper().approve_protocol(internal_id=internal_id)
+    except Exception as exception_message:
+        logger.error(f"Can't approve protocol for unit {internal_id}. Exception: {exception_message}")
         raise DatabaseException(detail=exception_message)
 
     return GenericResponse()

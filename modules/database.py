@@ -7,6 +7,7 @@ from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection, Asyn
 from pydantic import BaseModel
 
 from modules.cacher import RedisCacher
+from modules.exceptions import DatabaseException
 
 from .models import (
     Employee,
@@ -16,6 +17,7 @@ from .models import (
     ProductionStageData,
     Protocol,
     ProtocolData,
+    UnitStatus,
     UserWithPassword,
 )
 from .singleton import SingletonMeta
@@ -528,15 +530,19 @@ class MongoDbWrapper(metaclass=SingletonMeta):
 
             await self.add_stage(await stage.clear(number=len(stages)))
 
-    async def approve_protocol(self, internal_id: str, data: ProtocolData) -> None:
+    async def process_protocol(self, internal_id: str, data: ProtocolData) -> None:
         protocol = await self.get_concrete_protocol(internal_id=internal_id)
 
         if not protocol:
+            logger.info(
+                f"Protocol for unit {internal_id} not found. Will be created from given data. Protocol: {data.protocol_id}"
+            )
             await self.add_protocol(data)
-            return
+            return None
 
-        if protocol.status == "Протокол утверждён":
+        if protocol.status.is_approved:
             logger.warning(f"Protocol was already finalized. Unit {internal_id}, protocol {data.protocol_id}")
+            raise ValueError("Protocol were already finalized. Can't update immutable protocol.")
 
         protocol.rows = data.rows
         protocol.status = await protocol.status.switch()
@@ -545,3 +551,13 @@ class MongoDbWrapper(metaclass=SingletonMeta):
 
         if protocol.status == "Вторая стадия испытаний пройдена":
             await self.update_passport_status(internal_id=internal_id, status="approved")
+
+    async def approve_protocol(self, internal_id: str) -> None:
+        """Method to approve protocol. After approvement, protocol will became immutable"""
+        protocol = await self.get_concrete_protocol(internal_id=internal_id)
+        associated_passport = await self.get_concrete_passport(internal_id=internal_id)
+
+        if not protocol or not associated_passport:
+            raise ValueError(f"Protocol {internal_id} not found")
+
+        await self.update_passport_status(internal_id=internal_id, status=UnitStatus.finalized)

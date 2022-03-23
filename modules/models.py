@@ -212,8 +212,11 @@ class ProtocolStatus(str, enum.Enum):
         elif self.value == self.second:
             return ProtocolStatus(self.third.value)
         else:
-            logger.warning("Switching from last possible status")
             return ProtocolStatus(self.third.value)
+
+    @property
+    async def is_approved(self) -> bool:
+        return bool(self.value == self.third)
 
 
 class ProtocolRow(BaseModel):
