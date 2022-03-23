@@ -63,10 +63,21 @@ async def handle_protocol_update(protocol: ProtocolData = Depends(handle_protoco
     return GenericResponse()
 
 
-@router.post("/{internal_id}/approve", response_model=GenericResponse)
+@router.post("/protocols/{internal_id}/approve", response_model=GenericResponse)
 async def approve_protocol(internal_id: str) -> GenericResponse:
     try:
         await MongoDbWrapper().approve_protocol(internal_id=internal_id)
+    except Exception as exception_message:
+        logger.error(f"Can't approve protocol for unit {internal_id}. Exception: {exception_message}")
+        raise DatabaseException(detail=exception_message)
+
+    return GenericResponse()
+
+
+@router.delete("/protocols/{internal_id}", response_model=GenericResponse)
+async def remove_protocol(internal_id: str) -> GenericResponse:
+    try:
+        await MongoDbWrapper().remove_protocol(internal_id=internal_id)
     except Exception as exception_message:
         logger.error(f"Can't approve protocol for unit {internal_id}. Exception: {exception_message}")
         raise DatabaseException(detail=exception_message)

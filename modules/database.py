@@ -429,6 +429,12 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         """remove production schema from database"""
         await self._remove_document_from_collection(self._schemas_collection, key="schema_id", value=schema_id)
 
+    async def remove_protocol(self, internal_id: str) -> None:
+        """remove protocol from database"""
+        await self._remove_document_from_collection(
+            self._protocols_data_collection, key="associated_unit_id", value=internal_id
+        )
+
     async def edit_schema(self, schema_id: str, new_schema_data: ProductionSchema) -> None:
         """edit single production stage schema by its schema_id"""
         await self._update_document_in_collection(
