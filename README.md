@@ -16,6 +16,8 @@ run via `docker-compose up --build`
 
 By default, access port is `5002`.
 
+Edit env file for Docker `.env`, follow instructions inside
+
 ## API
 
 
