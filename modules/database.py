@@ -112,7 +112,6 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         new_data: BaseModel,
         exclude: tp.Optional[tp.Set[str]] = None,
     ) -> None:
-        logger.warning("Using deprecated method _update_document_in_collection() use _update_document() instead")
         if exclude:
             await collection_.find_one_and_update({key: value}, {"$set": new_data.dict(exclude=exclude)})
         else:
