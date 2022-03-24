@@ -51,7 +51,6 @@ async def authenticate_user(username: str, password: str) -> tp.Optional[UserWit
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        logger.info(payload)
         username: str = payload.get("sub")
         if username is None:
             raise CredentialsValidationException

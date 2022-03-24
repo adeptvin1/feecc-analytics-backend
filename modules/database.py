@@ -287,7 +287,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         """retrieves all units"""
         if "types" in filter:
             matching_schemas_uuids = await self._get_all_from_collection(
-                self._schemas_types_collection,
+                self._schemas_collection,
                 model_=BaseModel,
                 filter={"schema_type": filter["types"]},
                 include_only="schema_id",
