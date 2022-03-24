@@ -49,7 +49,6 @@ async def authenticate_user(username: str, password: str) -> tp.Optional[UserWit
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
-    logger.info(f"got token {token}")
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         logger.info(payload)
@@ -62,7 +61,6 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
     user: tp.Optional[UserWithPassword] = await MongoDbWrapper().get_concrete_user(username=token_data.username)
     if user is None:
         raise CredentialsValidationException
-    logger.info(f"user: {dict(user)}")
     return User(**dict(user))
 
 

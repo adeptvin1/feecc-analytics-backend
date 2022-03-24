@@ -7,7 +7,6 @@ from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection, Asyn
 from pydantic import BaseModel
 
 from modules.cacher import RedisCacher
-from modules.exceptions import DatabaseException
 
 from .models import (
     Employee,
@@ -49,7 +48,6 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         self._prod_stage_collection: AsyncIOMotorCollection = self._database["Production-stages-data"]
         self._credentials_collection: AsyncIOMotorCollection = self._database["Analytics-credentials"]
         self._schemas_collection: AsyncIOMotorCollection = self._database["Production-schemas"]
-        self._schemas_types_collection: AsyncIOMotorClient = self._database["Production-schemas-types"]
         self._protocols_collection: AsyncIOMotorClient = self._database["Protocols"]
         self._protocols_data_collection: AsyncIOMotorClient = self._database["Protocols-data"]
 
@@ -74,7 +72,6 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         include_only: tp.Optional[str] = None,
     ) -> tp.List[tp.Any]:
         """retrieves all documents from the specified collection"""
-        logger.debug(f"Filter: {filter}")
         if include_only:
             return [
                 _[include_only]
@@ -232,11 +229,11 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             return None
 
     async def get_passport_type(self, schema_id: str) -> str:
-        logger.debug("Using deprecated method get_passport_type, now Unit have field type. Use it instead.")
         try:
-            return (
-                await self._get_element_by_key(self._schemas_types_collection, key="schema_id", value=schema_id)
-            ).get("schema_type", None)
+            type = (await self._get_element_by_key(self._schemas_collection, key="schema_id", value=schema_id))[
+                "schema_type"
+            ]
+            return str(type)
         except Exception:
             return "Unknown"
 
