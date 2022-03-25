@@ -114,7 +114,7 @@ class ProductionStage(BaseModel):
             session_end_time=None,
             completed=False,
             number=number,
-            additional_info={},
+            additional_info={"reworked": True},
             schema_stage_id=self.schema_stage_id,
         )
 
