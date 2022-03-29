@@ -283,75 +283,97 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             tp.List[Employee], await self._get_all_from_collection(self._employee_collection, model_=Employee)
         )
 
-    async def get_passports(self, filter: Filter = {}) -> tp.List[Passport]:
-        """retrieves all units"""
-        if "types" in filter:
-            matching_schemas_uuids = await self._get_all_from_collection(
-                self._schemas_collection,
-                model_=BaseModel,
-                filter={"schema_type": filter["types"]},
-                include_only="schema_id",
-            )
-            del filter["types"]
+    async def _parse_types_filter(self, filter: Filter = {}) -> Filter:
+        matching_schemas_uuids = await self._get_all_from_collection(
+            self._schemas_collection,
+            model_=BaseModel,
+            filter={"schema_type": filter["types"]},
+            include_only="schema_id",
+        )
+        del filter["types"]
+        filter["schema_id"] = {"$in": matching_schemas_uuids}
+        return filter
+
+    async def _parse_name_filter(self, filter: Filter = {}) -> Filter:
+        matching_schemas_uuids = await self._get_all_from_collection(
+            self._schemas_collection,
+            model_=BaseModel,
+            filter={"unit_name": filter["name"]},
+            include_only="schema_id",
+        )
+
+        del filter["name"]
+        if "schema_id" in filter:
+            filter["schema_id"]["$in"] = list(set(filter["schema_id"]["$in"]).intersection(set(matching_schemas_uuids)))  # type: ignore
+        else:
             filter["schema_id"] = {"$in": matching_schemas_uuids}
 
+        return filter
+
+    async def get_passports(self, filter: Filter = {}) -> tp.List[Passport]:
+        """retrieves all units (by filters)"""
+        if "types" in filter:
+            filter = await self._parse_types_filter(filter=filter)
+
         if "name" in filter:
-            matching_schemas_uuids = await self._get_all_from_collection(
-                self._schemas_collection,
-                model_=BaseModel,
-                filter={"unit_name": filter["name"]},
-                include_only="schema_id",
-            )
-            del filter["name"]
-            if "schema_id" in filter:
-                filter["schema_id"]["$in"] = list(set(filter["schema_id"]["$in"]).intersection(set(matching_schemas_uuids)))  # type: ignore
-            else:
-                filter["schema_id"] = {"$in": matching_schemas_uuids}
+            filter = await self._parse_name_filter(filter=filter)
 
         return tp.cast(
             tp.List[Passport],
             await self._get_all_from_collection(self._unit_collection, model_=Passport, filter=filter),
         )
 
+    async def _get_stages_by_uuid(self, uuid: tp.Optional[str] = None, is_subcomponent: bool = False) -> tp.List[ProductionStageData]:
+        """retrieves unit's production stages by its uuid"""
+        stages = await self._get_all_from_collection(
+            self._prod_stage_collection, model_=ProductionStageData, filter={"parent_unit_uuid": uuid}
+        )
+
+        for stage in stages:
+            if not stage.parent_unit_uuid:
+                continue
+            if is_subcomponent:
+                stage.parent_unit_internal_id = await self.get_internal_id_by_uuid(uuid=stage.parent_unit_uuid)
+                stage.unit_name = await self.get_passport_name(
+                    await self.get_internal_id_by_uuid(uuid=stage.parent_unit_uuid)
+                )
+
+        return stages
+
+    async def _get_stages_by_internal_id(self, internal_id: tp.Optional[str] = None, is_subcomponent: bool = False) -> tp.List[ProductionStageData]:
+        """retrieves unit's production stages by its internal id"""
+        passport = await self.get_concrete_passport(internal_id=internal_id)
+        if not passport:
+            logger.warning(f"Stages for unit {internal_id} not found")
+            return []
+
+        stages = await self._get_all_from_collection(
+            self._prod_stage_collection, model_=ProductionStageData, filter={"parent_unit_uuid": passport.uuid}
+        )
+
+        for stage in stages:
+            if not stage.parent_unit_uuid:
+                continue
+            if is_subcomponent:
+                stage.parent_unit_internal_id = await self.get_internal_id_by_uuid(uuid=stage.parent_unit_uuid)
+                stage.unit_name = await self.get_passport_name(
+                    await self.get_internal_id_by_uuid(uuid=stage.parent_unit_uuid)
+                )
+
+        return stages
+
     async def get_stages(
         self, internal_id: tp.Optional[str] = None, uuid: tp.Optional[str] = None, is_subcomponent: bool = False
     ) -> tp.List[ProductionStageData]:
-        """retrieves all production stages"""
+        """retrieves all production stages by given uuid or internal_id"""
         stages: tp.List[ProductionStageData]
 
         if internal_id and uuid:
             raise ValueError("Stages search only available by uuid or internal_id")
         if uuid:
-            stages = await self._get_all_from_collection(
-                self._prod_stage_collection, model_=ProductionStageData, filter={"parent_unit_uuid": uuid}
-            )
-            for stage in stages:
-                if not stage.parent_unit_uuid:
-                    continue
-                if is_subcomponent:
-                    stage.parent_unit_internal_id = await self.get_internal_id_by_uuid(uuid=stage.parent_unit_uuid)
-                    stage.unit_name = await self.get_passport_name(
-                        await self.get_internal_id_by_uuid(uuid=stage.parent_unit_uuid)
-                    )
-
-            return stages
+            return await self._get_stages_by_uuid(uuid=uuid, is_subcomponent=is_subcomponent)
         if internal_id:
-            passport = await self.get_concrete_passport(internal_id=internal_id)
-            if not passport:
-                return []
-            stages = await self._get_all_from_collection(
-                self._prod_stage_collection, model_=ProductionStageData, filter={"parent_unit_uuid": passport.uuid}
-            )
-            for stage in stages:
-                if not stage.parent_unit_uuid:
-                    continue
-                if is_subcomponent:
-                    stage.parent_unit_internal_id = await self.get_internal_id_by_uuid(uuid=stage.parent_unit_uuid)
-                    stage.unit_name = await self.get_passport_name(
-                        await self.get_internal_id_by_uuid(uuid=stage.parent_unit_uuid)
-                    )
-
-            return stages
+            return await self._get_stages_by_internal_id(uuid=internal_id, is_subcomponent=is_subcomponent)
 
         return []
 
@@ -489,13 +511,14 @@ class MongoDbWrapper(metaclass=SingletonMeta):
     async def update_passport_status(self, internal_id: str, status: str) -> None:
         """update concrete passport status"""
         current_status = await self.get_passport_status(internal_id=internal_id)
-        logger.warning(f"Trying to change status from {current_status} to {status}")
+        logger.info(f"Trying to change status from {current_status} to {status}")
         if status == current_status:
             return None
         await self._update_document(self._unit_collection, {"internal_id": internal_id}, {"status": status})
 
     async def update_protocol(self, protocol_data: ProtocolData) -> None:
-        logger.debug(
+        """update information about concrete protocol (if exists)"""
+        logger.info(
             f"Updating protocol {protocol_data.protocol_id} for unit {protocol_data.associated_unit_id}. Data: {protocol_data.dict()}"
         )
         await self._update_document(
@@ -505,6 +528,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         )
 
     async def send_unit_for_revision(self, internal_id: str, stage_ids: tp.List[str]) -> None:
+        """send unit for revision by its internal_id and stages_ids which needs to be reworked (empty stages will be created)"""
         passport = await self.get_concrete_passport(internal_id=internal_id)
         if not passport:
             raise ValueError(f"Can't send unit for revision. Passport {internal_id} not found")
@@ -533,6 +557,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             await self.add_stage(await stage.clear(number=len(stages)))
 
     async def process_protocol(self, internal_id: str, data: ProtocolData) -> None:
+        """handle any protocol operations (update/create) for given passport (by internal_id)"""
         protocol = await self.get_concrete_protocol(internal_id=internal_id)
 
         if not protocol:
@@ -544,7 +569,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
 
         if protocol.status.is_approved:
             logger.warning(f"Protocol was already finalized. Unit {internal_id}, protocol {data.protocol_id}")
-            raise ValueError("Protocol were already finalized. Can't update immutable protocol.")
+            raise ValueError("Protocol was already finalized. Can't update immutable protocol.")
 
         protocol.rows = data.rows
         protocol.status = await protocol.status.switch()
