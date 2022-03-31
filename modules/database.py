@@ -304,7 +304,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
 
         del filter["name"]
         if "schema_id" in filter:
-            filter["schema_id"]["$in"] = list(set(filter["schema_id"]["$in"]).intersection(set(matching_schemas_uuids)))  # type: ignore
+            filter["schema_id"]["$in"] = list(set(filter["schema_id"]["$in"]).intersection(set(matching_schemas_uuids)))
         else:
             filter["schema_id"] = {"$in": matching_schemas_uuids}
 
@@ -323,7 +323,9 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             await self._get_all_from_collection(self._unit_collection, model_=Passport, filter=filter),
         )
 
-    async def _get_stages_by_uuid(self, uuid: tp.Optional[str] = None, is_subcomponent: bool = False) -> tp.List[ProductionStageData]:
+    async def _get_stages_by_uuid(
+        self, uuid: tp.Optional[str] = None, is_subcomponent: bool = False
+    ) -> tp.List[ProductionStageData]:
         """retrieves unit's production stages by its uuid"""
         stages = await self._get_all_from_collection(
             self._prod_stage_collection, model_=ProductionStageData, filter={"parent_unit_uuid": uuid}
@@ -340,7 +342,9 @@ class MongoDbWrapper(metaclass=SingletonMeta):
 
         return stages
 
-    async def _get_stages_by_internal_id(self, internal_id: tp.Optional[str] = None, is_subcomponent: bool = False) -> tp.List[ProductionStageData]:
+    async def _get_stages_by_internal_id(
+        self, internal_id: tp.Optional[str] = None, is_subcomponent: bool = False
+    ) -> tp.List[ProductionStageData]:
         """retrieves unit's production stages by its internal id"""
         passport = await self.get_concrete_passport(internal_id=internal_id)
         if not passport:
@@ -373,7 +377,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         if uuid:
             return await self._get_stages_by_uuid(uuid=uuid, is_subcomponent=is_subcomponent)
         if internal_id:
-            return await self._get_stages_by_internal_id(uuid=internal_id, is_subcomponent=is_subcomponent)
+            return await self._get_stages_by_internal_id(internal_id=internal_id, is_subcomponent=is_subcomponent)
 
         return []
 

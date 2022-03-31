@@ -68,6 +68,11 @@ async def check_user_permissions(user: User = Depends(get_current_user)) -> None
         raise ForbiddenActionException
 
 
+async def check_tcd_permissions(user: User = Depends(get_current_user)) -> None:
+    if "approve" not in user.rule_set:
+        raise ForbiddenActionException
+
+
 async def create_new_user(user: NewUser) -> UserWithPassword:
     """New user's creation and validation of credentials fields"""
     if len(user.password) < 8:
