@@ -3,9 +3,12 @@ import typing as tp
 from fastapi import APIRouter, Depends
 from loguru import logger
 
+from modules.dependencies.handlers import check_passport
+
 from ..database import MongoDbWrapper
 from ..exceptions import DatabaseException
 from ..models import (
+    Employee,
     GenericResponse,
     OrderBy,
     Passport,
@@ -13,7 +16,7 @@ from ..models import (
     PassportsOut,
     TypesOut,
 )
-from ..dependencies.security import check_user_permissions, get_current_user
+from ..dependencies.security import check_user_permissions, get_current_employee, get_current_user
 from ..dependencies.filters import parse_passports_filter
 from ..types import Filter
 
@@ -156,6 +159,10 @@ async def patch_passport(internal_id: str, new_data: Passport) -> GenericRespons
 
 @router.post("/{internal_id}/revision", response_model=GenericResponse)
 async def send_for_revision(internal_id: str, stages_ids: tp.List[str]) -> GenericResponse:
+    """
+    Endpoint to sent current unit for revision by selected stages ids.
+    Empty copy of those stages will be created. Unit status will change to 'revision'.
+    """
     logger.info(f"Sending unit {internal_id} for revision")
     try:
         await MongoDbWrapper().send_unit_for_revision(internal_id=internal_id, stage_ids=stages_ids)
@@ -164,3 +171,22 @@ async def send_for_revision(internal_id: str, stages_ids: tp.List[str]) -> Gener
         logger.error(f"Failed to send unit {internal_id} for revision. Exception: {exception_message}")
         raise DatabaseException(error=exception_message)
     return GenericResponse(detail="Successfully sent unit for revision")
+
+
+@router.post("/{internal_id}/revision/cancel", response_model=GenericResponse, dependencies=[Depends(check_passport)])
+async def cancel_revision_stage(
+    internal_id: str, stage_id: str, employee: tp.Optional[Employee] = Depends(get_current_employee)
+) -> GenericResponse:
+    """
+    Endpoint to cancel revision for selected stages.
+    If it's the only stage sent for revision, current unit will change its status to 'built',
+    otherwise nothing will be changed
+    """
+    logger.info(f"Canceling revision for stage {stage_id} of unit {internal_id} by employee {employee or 'Unknown'}")
+    try:
+        await MongoDbWrapper().cancel_revision(stage_id=stage_id, employee=employee)
+    except Exception as exception_message:
+        logger.error(f"Failed to cancel revision for unit {internal_id}. Exception: {exception_message}")
+        raise DatabaseException(error=exception_message)
+
+    return GenericResponse(detail=f"Marked stage {stage_id} as canceled")

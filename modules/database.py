@@ -284,6 +284,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         )
 
     async def _parse_types_filter(self, filter: Filter = {}) -> Filter:
+        """parse matching units uuid by types filter"""
         matching_schemas_uuids = await self._get_all_from_collection(
             self._schemas_collection,
             model_=BaseModel,
@@ -295,6 +296,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         return filter
 
     async def _parse_name_filter(self, filter: Filter = {}) -> Filter:
+        """parse matching units uuid by name filtering"""
         matching_schemas_uuids = await self._get_all_from_collection(
             self._schemas_collection,
             model_=BaseModel,
@@ -370,8 +372,6 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         self, internal_id: tp.Optional[str] = None, uuid: tp.Optional[str] = None, is_subcomponent: bool = False
     ) -> tp.List[ProductionStageData]:
         """retrieves all production stages by given uuid or internal_id"""
-        stages: tp.List[ProductionStageData]
-
         if internal_id and uuid:
             raise ValueError("Stages search only available by uuid or internal_id")
         if uuid:
@@ -592,3 +592,25 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             raise ValueError(f"Protocol {internal_id} not found")
 
         await self.update_passport_status(internal_id=internal_id, status=UnitStatus.finalized)
+
+    async def cancel_revision(self, stage_id: str, employee: tp.Optional[Employee] = None) -> None:
+        """Method to cancel revision for concrete production stage. It'll be marked as 'canceled'"""
+        stage = await self.get_concrete_stage(stage_id=stage_id)
+        if not stage:
+            raise ValueError(f"Stage {stage_id} not found")
+        if not stage.additional_info:
+            stage.additional_info = {}
+        if stage.completed:
+            raise ValueError(f"Can't cancel revision")
+
+        stage.additional_info["canceled"] = True
+        stage.additional_info["canceled_date"] = datetime.datetime.now()
+        stage.additional_info["canceled_by"] = employee or "Unknown"
+
+        stages = await self.get_stages(uuid=stage.parent_unit_uuid)
+        if sum(not stage.completed for stage in stages) < 2:
+            await self.update_passport_status(
+                internal_id=await self.get_internal_id_by_uuid(uuid=stage.parent_unit_uuid), status=UnitStatus.built
+            )
+
+        await self.edit_stage(stage_id=stage_id, new_stage_data=stage)
