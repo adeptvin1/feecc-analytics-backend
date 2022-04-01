@@ -3,16 +3,13 @@ import typing as tp
 from fastapi import APIRouter, Depends
 from loguru import logger
 
-from ..dependencies.handlers import handle_protocol
-
-
-from ..database import MongoDbWrapper
-from ..exceptions import DatabaseException
-from ..models import Employee, GenericResponse, Protocol, ProtocolData, ProtocolOut, ProtocolsOut, TypesOut
-from ..types import Filter
-from ..dependencies.filters import parse_tcd_filters
-from ..dependencies.security import get_current_employee, get_current_user
-
+from ...database import MongoDbWrapper
+from ...dependencies.filters import parse_tcd_filters
+from ...dependencies.handlers import handle_protocol
+from ...dependencies.security import get_current_employee, get_current_user
+from ...exceptions import DatabaseException
+from ...types import Filter
+from .models import Employee, GenericResponse, Protocol, ProtocolData, ProtocolOut, ProtocolsOut, TypesOut
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
 

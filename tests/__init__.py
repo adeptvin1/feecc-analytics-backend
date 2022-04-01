@@ -1,7 +1,9 @@
-from fastapi.testclient import TestClient
-from app import api
-import random
 import os
+import random
+
+from fastapi.testclient import TestClient
+
+from app import api
 
 # TO RUN TESTS SET ENVVARS ANALYTICS_TEST_ADMIN_USERNAME AND ANALYTICS_TEST_ADMIN_PASSWORD
 TEST_USER = {

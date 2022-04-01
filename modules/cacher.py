@@ -1,12 +1,12 @@
+import os
 import time
 import typing as tp
 
-import os
+import redis
 from loguru import logger
 from pydantic import BaseModel, parse_obj_as
-import redis
 
-from modules.models import Employee
+from modules.routers.employees.models import Employee
 
 from .singleton import SingletonMeta
 

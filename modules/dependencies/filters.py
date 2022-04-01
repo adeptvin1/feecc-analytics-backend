@@ -2,8 +2,10 @@ import datetime
 import typing as tp
 
 from pydantic import Field
+
+from modules.routers.tcd.models import ProtocolStatus
+from modules.routers.passports.models import UnitStatus
 from ..types import Filter
-from ..models import ProtocolStatus, UnitStatus
 
 
 async def parse_passports_filter(

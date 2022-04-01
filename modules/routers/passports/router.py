@@ -5,21 +5,13 @@ from loguru import logger
 
 from modules.dependencies.handlers import check_passport
 
-from ..database import MongoDbWrapper
-from ..exceptions import DatabaseException
-from ..models import (
-    Employee,
-    GenericResponse,
-    OrderBy,
-    Passport,
-    PassportOut,
-    PassportsOut,
-    TypesOut,
-)
-from ..dependencies.security import check_user_permissions, get_current_employee, get_current_user
-from ..dependencies.filters import parse_passports_filter
-from ..types import Filter
-
+from ...database import MongoDbWrapper
+from ...dependencies.filters import parse_passports_filter
+from ...dependencies.security import check_user_permissions, get_current_employee, get_current_user
+from ...exceptions import DatabaseException
+from ...types import Filter
+from ..employees.models import Employee
+from .models import GenericResponse, OrderBy, Passport, PassportOut, PassportsOut, TypesOut
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
 

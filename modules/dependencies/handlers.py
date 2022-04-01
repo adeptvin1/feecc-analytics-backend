@@ -2,10 +2,12 @@ import typing as tp
 
 from fastapi import Depends
 from loguru import logger
-from ..models import Protocol, ProtocolData, User
-from .security import get_current_user
-from ..exceptions import DatabaseException, ForbiddenActionException
+
 from ..database import MongoDbWrapper
+from ..exceptions import DatabaseException, ForbiddenActionException
+from modules.routers.tcd.models import Protocol, ProtocolData
+from ..models import User
+from .security import get_current_user
 
 
 async def handle_protocol(internal_id: str, protocol: Protocol, user: User = Depends(get_current_user)) -> ProtocolData:

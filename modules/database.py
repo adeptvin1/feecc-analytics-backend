@@ -8,17 +8,13 @@ from pydantic import BaseModel
 
 from modules.cacher import RedisCacher
 
-from .models import (
-    Employee,
-    Passport,
-    ProductionSchema,
-    ProductionStage,
-    ProductionStageData,
-    Protocol,
-    ProtocolData,
-    UnitStatus,
-    UserWithPassword,
-)
+from modules.routers.users.models import UserWithPassword
+from modules.routers.employees.models import Employee
+from modules.routers.passports.models import Passport, UnitStatus
+from modules.routers.schemas.models import ProductionSchema
+from modules.routers.stages.models import ProductionStage, ProductionStageData
+from modules.routers.tcd.models import Protocol, ProtocolData
+
 from .singleton import SingletonMeta
 from .types import Filter
 

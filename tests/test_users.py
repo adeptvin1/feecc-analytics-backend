@@ -1,4 +1,4 @@
-from . import client, login, TEST_USER, FAKE_USER
+from . import FAKE_USER, TEST_USER, client, login
 
 
 def test_get_data_about_unauthorized_user():

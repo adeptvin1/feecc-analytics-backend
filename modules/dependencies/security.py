@@ -10,8 +10,12 @@ from passlib.context import CryptContext
 
 from modules.database import MongoDbWrapper
 from modules.exceptions import CredentialsValidationException, ForbiddenActionException
-from modules.models import Employee, NewUser, TokenData, User, UserWithPassword
 
+from modules.routers.employees.models import Employee
+from modules.routers.users.models import NewUser, UserWithPassword
+from modules.routers.service.models import TokenData
+
+from modules.models import User
 SECRET_KEY = os.environ.get("SECRET_KEY")
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 ALGORITHM = "HS256"
