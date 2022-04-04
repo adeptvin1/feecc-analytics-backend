@@ -244,7 +244,8 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             return None
         if not passport.schema_id:
             return None
-        return (await self.get_concrete_schema(schema_id=passport.schema_id)).unit_name
+        schema = await self.get_concrete_schema(schema_id=passport.schema_id)
+        return str(schema.unit_name)
 
     async def get_passport_status(self, internal_id: str) -> tp.Optional[str]:
         """retrieves concrete passport status"""
@@ -379,10 +380,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
 
     async def get_all_schemas(self) -> tp.List[ProductionSchema]:
         """retrieves all production schemas"""
-        return tp.cast(
-            tp.List[ProductionSchema],
-            await self._get_all_from_collection(self._schemas_collection, model_=ProductionSchema),
-        )
+        return await self._get_all_from_collection(self._schemas_collection, model_=ProductionSchema)
 
     async def count_employees(self) -> int:
         """count documents in employee collection"""
@@ -575,9 +573,6 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         protocol.status = await protocol.status.switch()
 
         await self.update_protocol(protocol)
-
-        if protocol.status == "Вторая стадия испытаний пройдена":
-            await self.update_passport_status(internal_id=internal_id, status="approved")
 
     async def approve_protocol(self, internal_id: str) -> None:
         """Method to approve protocol. After approvement, protocol will became immutable"""

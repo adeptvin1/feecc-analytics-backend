@@ -2,9 +2,9 @@ import typing as tp
 
 from fastapi import APIRouter, Depends
 
-from ...database import MongoDbWrapper
-from ...dependencies.security import check_user_permissions, get_current_user
-from ...exceptions import DatabaseException
+from modules.database import MongoDbWrapper
+from modules.dependencies.security import check_user_permissions, get_current_user
+from modules.exceptions import DatabaseException
 from .models import GenericResponse, ProductionSchema, ProductionSchemaOut, ProductionSchemasOut
 
 router = APIRouter(dependencies=[Depends(get_current_user)])

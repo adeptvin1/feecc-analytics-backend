@@ -16,6 +16,7 @@ from modules.routers.users.models import NewUser, UserWithPassword
 from modules.routers.service.models import TokenData
 
 from modules.models import User
+
 SECRET_KEY = os.environ.get("SECRET_KEY")
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 ALGORITHM = "HS256"

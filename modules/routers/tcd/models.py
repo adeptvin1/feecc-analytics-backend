@@ -24,10 +24,7 @@ class ProtocolStatus(str, enum.Enum):
     async def switch(self) -> ProtocolStatus:
         if self.value == self.first:
             return ProtocolStatus(self.second.value)
-        elif self.value == self.second:
-            return ProtocolStatus(self.third.value)
-        else:
-            return ProtocolStatus(self.third.value)
+        return self
 
     @property
     async def is_approved(self) -> bool:

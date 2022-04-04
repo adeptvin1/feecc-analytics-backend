@@ -5,7 +5,9 @@ from fastapi import APIRouter, Depends
 from ...database import MongoDbWrapper
 from ...dependencies.security import check_user_permissions, create_new_user, get_current_employee, get_current_user
 from ...exceptions import DatabaseException
-from .models import Employee, GenericResponse, User, UserOut, UserWithPassword
+from .models import GenericResponse, UserOut, UserWithPassword
+from modules.routers.employees.models import Employee
+from ...models import User
 
 router = APIRouter()
 
