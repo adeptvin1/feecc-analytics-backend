@@ -11,7 +11,7 @@ from ..employees.models import Employee
 
 
 class GenericResponse(BaseModel):
-    status: int = 200
+    status_code: int = 200
     detail: str = "Success"
 
 

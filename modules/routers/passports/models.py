@@ -9,7 +9,7 @@ from ..stages.models import ProductionStageData
 
 
 class GenericResponse(BaseModel):
-    status: int = 200
+    status_code: int = 200
     detail: str = "Success"
 
 

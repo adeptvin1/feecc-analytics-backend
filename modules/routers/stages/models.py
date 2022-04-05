@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 
 class GenericResponse(BaseModel):
-    status: int = 200
+    status_code: int = 200
     detail: str = "Success"
 
 
