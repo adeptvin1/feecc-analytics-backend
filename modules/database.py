@@ -13,7 +13,7 @@ from modules.routers.employees.models import Employee
 from modules.routers.passports.models import Passport, UnitStatus
 from modules.routers.schemas.models import ProductionSchema
 from modules.routers.stages.models import ProductionStage, ProductionStageData
-from modules.routers.tcd.models import Protocol, ProtocolData
+from modules.routers.tcd.models import Protocol, ProtocolData, ProtocolStatus
 
 from .singleton import SingletonMeta
 from .types import Filter
@@ -565,7 +565,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             await self.add_protocol(data)
             return None
 
-        if protocol.status.is_approved:
+        if await protocol.status.is_approved:
             logger.warning(f"Protocol was already finalized. Unit {internal_id}, protocol {data.protocol_id}")
             raise ValueError("Protocol was already finalized. Can't update immutable protocol.")
 
@@ -582,7 +582,12 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         if not protocol or not associated_passport:
             raise ValueError(f"Protocol {internal_id} not found")
 
+        protocol.status = ProtocolStatus.third
+
+        logger.info(f"Approved protocol for unit {internal_id}, protocol {protocol.protocol_id}")
+
         await self.update_passport_status(internal_id=internal_id, status=UnitStatus.finalized)
+        await self.update_protocol(protocol_data=protocol)
 
     async def cancel_revision(self, stage_id: str, employee: tp.Optional[Employee] = None) -> None:
         """Method to cancel revision for concrete production stage. It'll be marked as 'canceled'"""
