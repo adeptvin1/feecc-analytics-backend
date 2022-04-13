@@ -37,6 +37,7 @@ class Passport(BaseModel):
     parential_unit: tp.Optional[str] = None
     serial_number: tp.Optional[str] = None
     status: tp.Optional[UnitStatus] = None
+    txn_hash: tp.Optional[str] = None
 
 
 class PassportsOut(GenericResponse):
