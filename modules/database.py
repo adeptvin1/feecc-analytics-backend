@@ -44,8 +44,8 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         self._prod_stage_collection: AsyncIOMotorCollection = self._database["productionStagesData"]
         self._credentials_collection: AsyncIOMotorCollection = self._database["analyticsCredentials"]
         self._schemas_collection: AsyncIOMotorCollection = self._database["productionSchemas"]
-        self._protocols_collection: AsyncIOMotorClient = self._database["protocols"]
-        self._protocols_data_collection: AsyncIOMotorClient = self._database["protocolsData"]
+        self._protocols_collection: AsyncIOMotorCollection = self._database["protocols"]
+        self._protocols_data_collection: AsyncIOMotorCollection = self._database["protocolsData"]
 
         logger.info("Connected to MongoDB")
 
@@ -96,9 +96,22 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         await collection_.insert_one(item_.dict())
 
     @staticmethod
-    async def _remove_document_from_collection(collection_: AsyncIOMotorCollection, key: str, value: str) -> None:
-        """Remove document from collection by {key:value}"""
-        await collection_.find_one_and_delete({key: value})
+    async def _remove_document_from_collection(
+        collection_: AsyncIOMotorCollection, key: str, value: str, multiple: tp.Optional[bool] = None
+    ) -> None:
+        """
+        Remove document from collection by {key:value}.
+        It will delete first found matching document if `multiple` option not specified,
+        otherwise every matching document will be purged from database
+        """
+        query = {key: value}
+
+        if multiple:
+            result = await collection_.delete_many(query)
+        else:
+            result = await collection_.find_one_and_delete(query)
+
+        logger.debug(f"deleted {result.deleted_count} documents by query {query}")
 
     @staticmethod
     async def _update_document_in_collection(
@@ -108,6 +121,11 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         new_data: BaseModel,
         exclude: tp.Optional[tp.Set[str]] = None,
     ) -> None:
+        """
+        XXX: DEPRECATED AND WILL BE REMOVED SOON, use _update_document() instead
+        Find and update single document by query filter.
+        If `exclude` specified, those fields won't be updated
+        """
         if exclude:
             await collection_.find_one_and_update({key: value}, {"$set": new_data.dict(exclude=exclude)})
         else:
@@ -117,6 +135,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
     async def _update_document(
         collection: AsyncIOMotorCollection, filter: tp.Dict[str, str], new_data: tp.Dict[str, str]
     ) -> None:
+        """Find and update single document by query filter"""
         if not filter or not new_data:
             raise ValueError(f"Expected filter and new_data, got {filter}:{new_data}")
         await collection.find_one_and_update(filter, {"$set": new_data})
@@ -145,6 +164,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         return passport.internal_id
 
     async def get_components_internal_id(self, uuids: tp.Optional[tp.List[str]]) -> tp.List[str]:
+        """Converts all components uuids to internal ids"""
         if not uuids:
             return []
         int_ids: tp.List[str] = []
@@ -224,6 +244,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             return None
 
     async def get_passport_type(self, schema_id: str) -> str:
+        """retrieves unit type by given schema id"""
         try:
             type = (await self._get_element_by_key(self._schemas_collection, key="schema_id", value=schema_id))[
                 "schema_type"
@@ -233,12 +254,14 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             return "Unknown"
 
     async def get_passport_serial_number(self, internal_id: str) -> tp.Optional[str]:
+        """retrieves unit serial number by given internal id"""
         passport = await self.get_concrete_passport(internal_id=internal_id)
         if not passport:
             return None
         return passport.serial_number
 
     async def get_passport_name(self, internal_id: str) -> tp.Optional[str]:
+        """retrieves unit type by given internal id"""
         passport = await self.get_concrete_passport(internal_id=internal_id)
         if not passport:
             return None
@@ -429,9 +452,19 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         """remove employee from database"""
         await self._remove_document_from_collection(self._employee_collection, key="rfid_card_id", value=rfid_card_id)
 
-    async def remove_passport(self, internal_id: str) -> None:
-        """remove unit from database"""
+    async def remove_passport(self, internal_id: str, cascade: bool = False) -> None:
+        """
+        remove unit from database.
+        if `cascade` specified, all production stages for unit will be removed
+        """
         await self._remove_document_from_collection(self._unit_collection, key="internal_id", value=internal_id)
+        if cascade:
+            passport = await self.get_concrete_passport(internal_id=internal_id)
+            if not passport:
+                raise ValueError(f"Can't delete stages for passport {internal_id}, unit not found")
+            await self._remove_document_from_collection(
+                self._prod_stage_collection, key="parent_unit_uuid", value=passport.uuid, multiple=True
+            )
 
     async def remove_stage(self, stage_id: str) -> None:
         """remove production stage from database"""
