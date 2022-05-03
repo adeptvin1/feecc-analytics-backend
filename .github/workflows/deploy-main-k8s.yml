@@ -1,8 +1,6 @@
-name: Deploy in master-k8s
+name: Deploy in DO Container Registry
 on:
   push:
-    branches: [ main ]
-  pull_request:
     branches: [ main ]
     
 jobs:
