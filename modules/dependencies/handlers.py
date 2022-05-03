@@ -2,10 +2,12 @@ import typing as tp
 
 from fastapi import Depends
 from loguru import logger
-from ..models import Protocol, ProtocolData, User
-from .security import get_current_user
-from ..exceptions import DatabaseException, ForbiddenActionException
+
 from ..database import MongoDbWrapper
+from ..exceptions import DatabaseException, ForbiddenActionException
+from modules.routers.tcd.models import Protocol, ProtocolData
+from ..models import User
+from .security import get_current_user
 
 
 async def handle_protocol(internal_id: str, protocol: Protocol, user: User = Depends(get_current_user)) -> ProtocolData:
@@ -27,3 +29,10 @@ async def handle_protocol(internal_id: str, protocol: Protocol, user: User = Dep
     logger.info(f"Found protocol for unit {internal_id}, status {latest_protocol.status}. Protocol will be updated")
     latest_protocol.rows = protocol.rows
     return latest_protocol
+
+
+async def check_passport(internal_id: str) -> None:
+    passport = await MongoDbWrapper().get_concrete_passport(internal_id=internal_id)
+    if not passport:
+        # TODO: Create special exception for handling missing passports
+        raise ValueError(f"Passport {internal_id} not found")

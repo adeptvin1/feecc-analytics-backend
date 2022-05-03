@@ -10,7 +10,12 @@ from passlib.context import CryptContext
 
 from modules.database import MongoDbWrapper
 from modules.exceptions import CredentialsValidationException, ForbiddenActionException
-from modules.models import Employee, NewUser, TokenData, User, UserWithPassword
+
+from modules.routers.employees.models import Employee
+from modules.routers.users.models import NewUser, UserWithPassword
+from modules.routers.service.models import TokenData
+
+from modules.models import User
 
 SECRET_KEY = os.environ.get("SECRET_KEY")
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
@@ -49,10 +54,8 @@ async def authenticate_user(username: str, password: str) -> tp.Optional[UserWit
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
-    logger.info(f"got token {token}")
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        logger.info(payload)
         username: str = payload.get("sub")
         if username is None:
             raise CredentialsValidationException
@@ -62,12 +65,16 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
     user: tp.Optional[UserWithPassword] = await MongoDbWrapper().get_concrete_user(username=token_data.username)
     if user is None:
         raise CredentialsValidationException
-    logger.info(f"user: {dict(user)}")
     return User(**dict(user))
 
 
 async def check_user_permissions(user: User = Depends(get_current_user)) -> None:
     if "write" not in user.rule_set:
+        raise ForbiddenActionException
+
+
+async def check_tcd_permissions(user: User = Depends(get_current_user)) -> None:
+    if "approve" not in user.rule_set:
         raise ForbiddenActionException
 
 

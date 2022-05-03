@@ -6,19 +6,15 @@ from loguru import logger
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection, AsyncIOMotorCursor
 from pydantic import BaseModel
 
-from modules.exceptions import DatabaseException
+from modules.cacher import RedisCacher
 
-from .models import (
-    Employee,
-    Passport,
-    ProductionSchema,
-    ProductionStage,
-    ProductionStageData,
-    Protocol,
-    ProtocolData,
-    ProtocolStatus,
-    UserWithPassword,
-)
+from modules.routers.users.models import UserWithPassword
+from modules.routers.employees.models import Employee
+from modules.routers.passports.models import Passport, UnitStatus
+from modules.routers.schemas.models import ProductionSchema
+from modules.routers.stages.models import ProductionStage, ProductionStageData
+from modules.routers.tcd.models import Protocol, ProtocolData, ProtocolStatus
+
 from .singleton import SingletonMeta
 from .types import Filter
 
@@ -43,18 +39,17 @@ class MongoDbWrapper(metaclass=SingletonMeta):
 
         self._database = mongo_client[os.environ.get("MONGO_DATABASE_NAME")]
 
-        self._employee_collection: AsyncIOMotorCollection = self._database["Employee-data"]
-        self._unit_collection: AsyncIOMotorCollection = self._database["Unit-data"]
-        self._prod_stage_collection: AsyncIOMotorCollection = self._database["Production-stages-data"]
-        self._credentials_collection: AsyncIOMotorCollection = self._database["Analytics-credentials"]
-        self._schemas_collection: AsyncIOMotorCollection = self._database["Production-schemas"]
-        self._schemas_types_collection: AsyncIOMotorClient = self._database["Production-schemas-types"]
-        self._protocols_collection: AsyncIOMotorClient = self._database["Protocols"]
-        self._protocols_data_collection: AsyncIOMotorClient = self._database["Protocols-data"]
+        self._employee_collection: AsyncIOMotorCollection = self._database["employeeData"]
+        self._unit_collection: AsyncIOMotorCollection = self._database["unitData"]
+        self._prod_stage_collection: AsyncIOMotorCollection = self._database["productionStagesData"]
+        self._credentials_collection: AsyncIOMotorCollection = self._database["analyticsCredentials"]
+        self._schemas_collection: AsyncIOMotorCollection = self._database["productionSchemas"]
+        self._protocols_collection: AsyncIOMotorCollection = self._database["protocols"]
+        self._protocols_data_collection: AsyncIOMotorCollection = self._database["protocolsData"]
 
         logger.info("Connected to MongoDB")
 
-        self._decoded_employees: tp.Dict[str, tp.Optional[Employee]] = {}
+        self._cacher: RedisCacher = RedisCacher()
 
     @staticmethod
     async def _remove_ids(cursor: AsyncIOMotorCursor) -> tp.List[tp.Dict[str, tp.Any]]:
@@ -73,7 +68,6 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         include_only: tp.Optional[str] = None,
     ) -> tp.List[tp.Any]:
         """retrieves all documents from the specified collection"""
-        logger.debug(f"Filter: {filter}")
         if include_only:
             return [
                 _[include_only]
@@ -102,9 +96,22 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         await collection_.insert_one(item_.dict())
 
     @staticmethod
-    async def _remove_document_from_collection(collection_: AsyncIOMotorCollection, key: str, value: str) -> None:
-        """Remove document from collection by {key:value}"""
-        await collection_.find_one_and_delete({key: value})
+    async def _remove_document_from_collection(
+        collection_: AsyncIOMotorCollection, key: str, value: str, multiple: tp.Optional[bool] = None
+    ) -> None:
+        """
+        Remove document from collection by {key:value}.
+        It will delete first found matching document if `multiple` option not specified,
+        otherwise every matching document will be purged from database
+        """
+        query = {key: value}
+
+        if multiple:
+            result = await collection_.delete_many(query)
+        else:
+            result = await collection_.find_one_and_delete(query)
+
+        logger.debug(f"deleted {result.deleted_count} documents by query {query}")
 
     @staticmethod
     async def _update_document_in_collection(
@@ -114,7 +121,11 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         new_data: BaseModel,
         exclude: tp.Optional[tp.Set[str]] = None,
     ) -> None:
-        logger.warning("Using deprecated method _update_document_in_collection() use _update_document() instead")
+        """
+        XXX: DEPRECATED AND WILL BE REMOVED SOON, use _update_document() instead
+        Find and update single document by query filter.
+        If `exclude` specified, those fields won't be updated
+        """
         if exclude:
             await collection_.find_one_and_update({key: value}, {"$set": new_data.dict(exclude=exclude)})
         else:
@@ -124,21 +135,24 @@ class MongoDbWrapper(metaclass=SingletonMeta):
     async def _update_document(
         collection: AsyncIOMotorCollection, filter: tp.Dict[str, str], new_data: tp.Dict[str, str]
     ) -> None:
+        """Find and update single document by query filter"""
         if not filter or not new_data:
             raise ValueError(f"Expected filter and new_data, got {filter}:{new_data}")
         await collection.find_one_and_update(filter, {"$set": new_data})
 
     async def decode_employee(self, hashed_employee: str) -> tp.Optional[Employee]:
         """Find an employee by hashed data"""
-        employee = self._decoded_employees.get(hashed_employee, None)
+        employee = await self._cacher.get_employee(hashed_employee)
         if employee is not None:
             return employee
+
         employees = await self.get_all_employees()
-        for employee in employees:
-            encoded_employee = await employee.encode_sha256()
-            if encoded_employee == hashed_employee:
-                self._decoded_employees[hashed_employee] = employee
-                return employee
+        await self._cacher.cache_employees(employees)
+
+        employee = await self._cacher.get_employee(hashed_employee)
+        if employee is not None:
+            return employee
+
         return None
 
     async def get_internal_id_by_uuid(self, uuid: str) -> str:
@@ -150,6 +164,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         return passport.internal_id
 
     async def get_components_internal_id(self, uuids: tp.Optional[tp.List[str]]) -> tp.List[str]:
+        """Converts all components uuids to internal ids"""
         if not uuids:
             return []
         int_ids: tp.List[str] = []
@@ -228,28 +243,32 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         except Exception:
             return None
 
-    async def get_passport_type(self, schema_id: str) -> tp.Optional[str]:
-        logger.debug("Using deprecated method get_passport_type, now Unit have field type. Use it instead.")
+    async def get_passport_type(self, schema_id: str) -> str:
+        """retrieves unit type by given schema id"""
         try:
-            return (
-                await self._get_element_by_key(self._schemas_types_collection, key="schema_id", value=schema_id)
-            ).get("schema_type", None)
+            type = (await self._get_element_by_key(self._schemas_collection, key="schema_id", value=schema_id))[
+                "schema_type"
+            ]
+            return str(type)
         except Exception:
-            return None
+            return "Unknown"
 
     async def get_passport_serial_number(self, internal_id: str) -> tp.Optional[str]:
+        """retrieves unit serial number by given internal id"""
         passport = await self.get_concrete_passport(internal_id=internal_id)
         if not passport:
             return None
         return passport.serial_number
 
     async def get_passport_name(self, internal_id: str) -> tp.Optional[str]:
+        """retrieves unit type by given internal id"""
         passport = await self.get_concrete_passport(internal_id=internal_id)
         if not passport:
             return None
         if not passport.schema_id:
             return None
-        return (await self.get_concrete_schema(schema_id=passport.schema_id)).unit_name
+        schema = await self.get_concrete_schema(schema_id=passport.schema_id)
+        return str(schema.unit_name)
 
     async def get_passport_status(self, internal_id: str) -> tp.Optional[str]:
         """retrieves concrete passport status"""
@@ -284,84 +303,107 @@ class MongoDbWrapper(metaclass=SingletonMeta):
             tp.List[Employee], await self._get_all_from_collection(self._employee_collection, model_=Employee)
         )
 
-    async def get_passports(self, filter: Filter = {}) -> tp.List[Passport]:
-        """retrieves all units"""
-        if "types" in filter:
-            matching_schemas_uuids = await self._get_all_from_collection(
-                self._schemas_types_collection,
-                model_=BaseModel,
-                filter={"schema_type": filter["types"]},
-                include_only="schema_id",
-            )
-            del filter["types"]
+    async def _parse_types_filter(self, filter: Filter = {}) -> Filter:
+        """parse matching units uuid by types filter"""
+        matching_schemas_uuids = await self._get_all_from_collection(
+            self._schemas_collection,
+            model_=BaseModel,
+            filter={"schema_type": filter["types"]},
+            include_only="schema_id",
+        )
+        del filter["types"]
+        filter["schema_id"] = {"$in": matching_schemas_uuids}
+        return filter
+
+    async def _parse_name_filter(self, filter: Filter = {}) -> Filter:
+        """parse matching units uuid by name filtering"""
+        matching_schemas_uuids = await self._get_all_from_collection(
+            self._schemas_collection,
+            model_=BaseModel,
+            filter={"unit_name": filter["name"]},
+            include_only="schema_id",
+        )
+
+        del filter["name"]
+        if "schema_id" in filter:
+            filter["schema_id"]["$in"] = list(set(filter["schema_id"]["$in"]).intersection(set(matching_schemas_uuids)))
+        else:
             filter["schema_id"] = {"$in": matching_schemas_uuids}
 
+        return filter
+
+    async def get_passports(self, filter: Filter = {}) -> tp.List[Passport]:
+        """retrieves all units (by filters)"""
+        if "types" in filter:
+            filter = await self._parse_types_filter(filter=filter)
+
         if "name" in filter:
-            matching_schemas_uuids = await self._get_all_from_collection(
-                self._schemas_collection,
-                model_=BaseModel,
-                filter={"unit_name": filter["name"]},
-                include_only="schema_id",
-            )
-            del filter["name"]
-            if "schema_id" in filter:
-                filter["schema_id"]["$in"] = list(set(filter["schema_id"]["$in"]).intersection(set(matching_schemas_uuids)))  # type: ignore
-            else:
-                filter["schema_id"] = {"$in": matching_schemas_uuids}
+            filter = await self._parse_name_filter(filter=filter)
 
         return tp.cast(
             tp.List[Passport],
             await self._get_all_from_collection(self._unit_collection, model_=Passport, filter=filter),
         )
 
+    async def _get_stages_by_uuid(
+        self, uuid: tp.Optional[str] = None, is_subcomponent: bool = False
+    ) -> tp.List[ProductionStageData]:
+        """retrieves unit's production stages by its uuid"""
+        stages = await self._get_all_from_collection(
+            self._prod_stage_collection, model_=ProductionStageData, filter={"parent_unit_uuid": uuid}
+        )
+
+        for stage in stages:
+            if not stage.parent_unit_uuid:
+                continue
+            if is_subcomponent:
+                stage.parent_unit_internal_id = await self.get_internal_id_by_uuid(uuid=stage.parent_unit_uuid)
+                stage.unit_name = await self.get_passport_name(
+                    await self.get_internal_id_by_uuid(uuid=stage.parent_unit_uuid)
+                )
+
+        return stages
+
+    async def _get_stages_by_internal_id(
+        self, internal_id: tp.Optional[str] = None, is_subcomponent: bool = False
+    ) -> tp.List[ProductionStageData]:
+        """retrieves unit's production stages by its internal id"""
+        passport = await self.get_concrete_passport(internal_id=internal_id)
+        if not passport:
+            logger.warning(f"Stages for unit {internal_id} not found")
+            return []
+
+        stages = await self._get_all_from_collection(
+            self._prod_stage_collection, model_=ProductionStageData, filter={"parent_unit_uuid": passport.uuid}
+        )
+
+        for stage in stages:
+            if not stage.parent_unit_uuid:
+                continue
+            if is_subcomponent:
+                stage.parent_unit_internal_id = await self.get_internal_id_by_uuid(uuid=stage.parent_unit_uuid)
+                stage.unit_name = await self.get_passport_name(
+                    await self.get_internal_id_by_uuid(uuid=stage.parent_unit_uuid)
+                )
+
+        return stages
+
     async def get_stages(
         self, internal_id: tp.Optional[str] = None, uuid: tp.Optional[str] = None, is_subcomponent: bool = False
     ) -> tp.List[ProductionStageData]:
-        """retrieves all production stages"""
-        stages: tp.List[ProductionStageData]
-
+        """retrieves all production stages by given uuid or internal_id"""
         if internal_id and uuid:
             raise ValueError("Stages search only available by uuid or internal_id")
         if uuid:
-            stages = await self._get_all_from_collection(
-                self._prod_stage_collection, model_=ProductionStageData, filter={"parent_unit_uuid": uuid}
-            )
-            for stage in stages:
-                if not stage.parent_unit_uuid:
-                    continue
-                if is_subcomponent:
-                    stage.parent_unit_internal_id = await self.get_internal_id_by_uuid(uuid=stage.parent_unit_uuid)
-                    stage.unit_name = await self.get_passport_name(
-                        await self.get_internal_id_by_uuid(uuid=stage.parent_unit_uuid)
-                    )
-
-            return stages
+            return await self._get_stages_by_uuid(uuid=uuid, is_subcomponent=is_subcomponent)
         if internal_id:
-            passport = await self.get_concrete_passport(internal_id=internal_id)
-            if not passport:
-                return []
-            stages = await self._get_all_from_collection(
-                self._prod_stage_collection, model_=ProductionStageData, filter={"parent_unit_uuid": passport.uuid}
-            )
-            for stage in stages:
-                if not stage.parent_unit_uuid:
-                    continue
-                if is_subcomponent:
-                    stage.parent_unit_internal_id = await self.get_internal_id_by_uuid(uuid=stage.parent_unit_uuid)
-                    stage.unit_name = await self.get_passport_name(
-                        await self.get_internal_id_by_uuid(uuid=stage.parent_unit_uuid)
-                    )
-
-            return stages
+            return await self._get_stages_by_internal_id(internal_id=internal_id, is_subcomponent=is_subcomponent)
 
         return []
 
     async def get_all_schemas(self) -> tp.List[ProductionSchema]:
         """retrieves all production schemas"""
-        return tp.cast(
-            tp.List[ProductionSchema],
-            await self._get_all_from_collection(self._schemas_collection, model_=ProductionSchema),
-        )
+        return await self._get_all_from_collection(self._schemas_collection, model_=ProductionSchema)
 
     async def count_employees(self) -> int:
         """count documents in employee collection"""
@@ -394,16 +436,6 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         )
         await self._add_document_to_collection(self._prod_stage_collection, stage)
 
-    # async def add_stage_to_passport(self, passport_id: str, stage: ProductionStage) -> None:
-    #     """add production stage to concrete unit"""
-    #     passport = await self.get_concrete_passport(internal_id=passport_id)
-    #     if passport is None:
-    #         raise KeyError(f"Unit with id {passport_id} not found")
-    #     if passport.biography is None:
-    #         passport.biography = []
-    #     passport.biography.append(stage)
-    #     await self.edit_passport(internal_id=passport_id, new_passport_data=passport)
-
     async def add_user(self, user: UserWithPassword) -> None:
         """add user to database"""
         await self._add_document_to_collection(self._credentials_collection, user)
@@ -420,9 +452,19 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         """remove employee from database"""
         await self._remove_document_from_collection(self._employee_collection, key="rfid_card_id", value=rfid_card_id)
 
-    async def remove_passport(self, internal_id: str) -> None:
-        """remove unit from database"""
+    async def remove_passport(self, internal_id: str, cascade: bool = False) -> None:
+        """
+        remove unit from database.
+        if `cascade` specified, all production stages for unit will be removed
+        """
         await self._remove_document_from_collection(self._unit_collection, key="internal_id", value=internal_id)
+        if cascade:
+            passport = await self.get_concrete_passport(internal_id=internal_id)
+            if not passport:
+                raise ValueError(f"Can't delete stages for passport {internal_id}, unit not found")
+            await self._remove_document_from_collection(
+                self._prod_stage_collection, key="parent_unit_uuid", value=passport.uuid, multiple=True
+            )
 
     async def remove_stage(self, stage_id: str) -> None:
         """remove production stage from database"""
@@ -435,6 +477,12 @@ class MongoDbWrapper(metaclass=SingletonMeta):
     async def remove_schema(self, schema_id: str) -> None:
         """remove production schema from database"""
         await self._remove_document_from_collection(self._schemas_collection, key="schema_id", value=schema_id)
+
+    async def remove_protocol(self, internal_id: str) -> None:
+        """remove protocol from database"""
+        await self._remove_document_from_collection(
+            self._protocols_data_collection, key="associated_unit_id", value=internal_id
+        )
 
     async def edit_schema(self, schema_id: str, new_schema_data: ProductionSchema) -> None:
         """edit single production stage schema by its schema_id"""
@@ -494,13 +542,14 @@ class MongoDbWrapper(metaclass=SingletonMeta):
     async def update_passport_status(self, internal_id: str, status: str) -> None:
         """update concrete passport status"""
         current_status = await self.get_passport_status(internal_id=internal_id)
+        logger.info(f"Trying to change status from {current_status} to {status}")
         if status == current_status:
-            logger.warning(f"Trying to change status from {current_status} to {status}")
             return None
         await self._update_document(self._unit_collection, {"internal_id": internal_id}, {"status": status})
 
     async def update_protocol(self, protocol_data: ProtocolData) -> None:
-        logger.debug(
+        """update information about concrete protocol (if exists)"""
+        logger.info(
             f"Updating protocol {protocol_data.protocol_id} for unit {protocol_data.associated_unit_id}. Data: {protocol_data.dict()}"
         )
         await self._update_document(
@@ -510,6 +559,7 @@ class MongoDbWrapper(metaclass=SingletonMeta):
         )
 
     async def send_unit_for_revision(self, internal_id: str, stage_ids: tp.List[str]) -> None:
+        """send unit for revision by its internal_id and stages_ids which needs to be reworked (empty stages will be created)"""
         passport = await self.get_concrete_passport(internal_id=internal_id)
         if not passport:
             raise ValueError(f"Can't send unit for revision. Passport {internal_id} not found")
@@ -537,17 +587,59 @@ class MongoDbWrapper(metaclass=SingletonMeta):
 
             await self.add_stage(await stage.clear(number=len(stages)))
 
-    async def approve_protocol(self, internal_id: str, data: ProtocolData) -> None:
+    async def process_protocol(self, internal_id: str, data: ProtocolData) -> None:
+        """handle any protocol operations (update/create) for given passport (by internal_id)"""
         protocol = await self.get_concrete_protocol(internal_id=internal_id)
 
         if not protocol:
+            logger.info(
+                f"Protocol for unit {internal_id} not found. Will be created from given data. Protocol: {data.protocol_id}"
+            )
             await self.add_protocol(data)
-            return
+            return None
 
-        if protocol.status == ProtocolStatus.third:
+        if await protocol.status.is_approved:
             logger.warning(f"Protocol was already finalized. Unit {internal_id}, protocol {data.protocol_id}")
+            raise ValueError("Protocol was already finalized. Can't update immutable protocol.")
 
         protocol.rows = data.rows
         protocol.status = await protocol.status.switch()
 
         await self.update_protocol(protocol)
+
+    async def approve_protocol(self, internal_id: str) -> None:
+        """Method to approve protocol. After approvement, protocol will became immutable"""
+        protocol = await self.get_concrete_protocol(internal_id=internal_id)
+        associated_passport = await self.get_concrete_passport(internal_id=internal_id)
+
+        if not protocol or not associated_passport:
+            raise ValueError(f"Protocol {internal_id} not found")
+
+        protocol.status = ProtocolStatus.third
+
+        logger.info(f"Approved protocol for unit {internal_id}, protocol {protocol.protocol_id}")
+
+        await self.update_passport_status(internal_id=internal_id, status=UnitStatus.finalized)
+        await self.update_protocol(protocol_data=protocol)
+
+    async def cancel_revision(self, stage_id: str, employee: tp.Optional[Employee] = None) -> None:
+        """Method to cancel revision for concrete production stage. It'll be marked as 'canceled'"""
+        stage = await self.get_concrete_stage(stage_id=stage_id)
+        if not stage:
+            raise ValueError(f"Stage {stage_id} not found")
+        if not stage.additional_info:
+            stage.additional_info = {}
+        if stage.completed:
+            raise ValueError(f"Can't cancel revision")
+
+        stage.additional_info["canceled"] = True
+        stage.additional_info["canceled_date"] = datetime.datetime.now()
+        stage.additional_info["canceled_by"] = employee or "Unknown"
+
+        stages = await self.get_stages(uuid=stage.parent_unit_uuid)
+        if sum(not stage.completed for stage in stages) < 2:
+            await self.update_passport_status(
+                internal_id=await self.get_internal_id_by_uuid(uuid=stage.parent_unit_uuid), status=UnitStatus.built
+            )
+
+        await self.edit_stage(stage_id=stage_id, new_stage_data=stage)

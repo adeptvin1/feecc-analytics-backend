@@ -2,16 +2,16 @@ import datetime
 import typing as tp
 
 from pydantic import Field
+
+from modules.routers.tcd.models import ProtocolStatus
+from modules.routers.passports.models import UnitStatus
 from ..types import Filter
-from ..models import ProtocolStatus, UnitStatus
 
 
 async def parse_passports_filter(
     status: tp.Optional[UnitStatus] = None,
     name: tp.Optional[str] = None,
     date: tp.Optional[datetime.datetime] = None,
-    overtime: tp.Optional[bool] = None,
-    rework: tp.Optional[bool] = None,
     types: tp.Optional[str] = None,
 ) -> Filter:
     clear_filter: Filter = {}
@@ -33,12 +33,6 @@ async def parse_passports_filter(
     if types is not None:
         types_array: tp.List[str] = types.split(",")
         clear_filter["types"] = {"$in": types_array}
-
-    if overtime is not None:
-        clear_filter["overtime"] = overtime
-
-    if rework is not None:
-        clear_filter["rework"] = rework
 
     if status:
         clear_filter["status"] = status
